@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils All.
 From MetaCoq.Translations Require Import translation_utils.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 (* Import BasicAst. *)
 
 Reserved Notation "'tsl_ty_param'".
@@ -594,5 +594,5 @@ elim/typing_ind: H => {Γ t T} Γ.
 
 
 
-Require Import Vector.
+From Stdlib Require Import Vector.
 (* MetaCoq Run (ΣE <- tTranslate ([],[]) "nat" ;; *)

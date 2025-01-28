@@ -1,4 +1,4 @@
-Require Import Coq.Strings.String.
+From Stdlib Require Import Strings.String.
 From MetaCoq.ExtractedPluginDemo Require Import Lens Loader.
 
 Set Primitive Projections.

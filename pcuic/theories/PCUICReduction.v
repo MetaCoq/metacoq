@@ -5,8 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICInduction PCUICPrimitive
      PCUICCases PCUICClosed PCUICTactics.
 
-Require Import ssreflect.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect.
+From Equations.Prop Require Import DepElim.
 From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
 Set Equations Transparent.
@@ -2159,7 +2159,7 @@ Proof.
 Qed.
 
 (* TODO Find a better place for this. *)
-Require Import PCUICPosition.
+From MetaCoq.PCUIC Require Import PCUICPosition.
 Section Stacks.
 
   Context (Σ : global_env_ext).

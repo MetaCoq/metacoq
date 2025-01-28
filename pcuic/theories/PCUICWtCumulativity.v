@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Common Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
@@ -8,9 +8,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution
      PCUICWellScopedCumulativity PCUICArities.
 
-Require Import CRelationClasses CMorphisms.
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+From Stdlib Require Import CRelationClasses CMorphisms.
+From Equations.Prop Require Import DepElim.
+From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
 
 (* High-level lemmas about well-typed ws_cumul_pb *)

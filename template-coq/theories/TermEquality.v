@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CMorphisms.
+From Stdlib Require Import CMorphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Reflect Environment EnvironmentTyping.
 From MetaCoq.Template Require Import Ast AstUtils Induction.
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.

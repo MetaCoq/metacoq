@@ -10,8 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICSR PCUICCumulProp PCUICWfUniverses
      PCUICOnFreeVars PCUICWellScopedCumulativity.
 
-Require Import ssreflect ssrbool.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect ssrbool.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
 
@@ -364,7 +364,7 @@ Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind ind' u u' args args'} {
   (∑ ui',
     cmp_ind_universes Σ ind #|args| ui' u *
     cmp_ind_universes Σ ind' #|args'| ui' u') *
-  ws_cumul_pb_terms Σ Γ args args' * 
+  ws_cumul_pb_terms Σ Γ args args' *
   (ind = ind').
 Proof.
   intros h h'.
@@ -375,7 +375,7 @@ Proof.
   eapply invert_red_mkApps_tInd in redl as [args'' [-> eq0]]; auto.
   eapply invert_red_mkApps_tInd in redr as [args''' [eqnf eq1]]; auto.
   solve_discr.
-  repeat split; eauto. 
+  repeat split; eauto.
   assert (#|args| = #|args'|).
   now rewrite -(All2_length eqargs) -(All2_length eqargs') (All2_length a) (All2_length a0).
   transitivity l'. now symmetry.

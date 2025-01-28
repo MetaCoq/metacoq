@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool ssrfun.
+From Stdlib Require Import ssreflect ssrbool ssrfun.
 Set Warnings "-notation-overridden".
 From MetaCoq.Utils Require Import utils monad_utils.
 Set Warnings "notation-overridden".

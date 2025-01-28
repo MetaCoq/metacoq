@@ -1,5 +1,5 @@
-From Coq.FSets Require Import FMapList.
-From Coq.Structures Require Import Equalities OrdersAlt.
+From Stdlib.FSets Require Import FMapList.
+From Stdlib.Structures Require Import Equalities OrdersAlt.
 From MetaCoq.Utils Require Import MCFSets.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Stdlib.Structures Require Import OrdersAlt.Sig.

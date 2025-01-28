@@ -1,5 +1,5 @@
-From Coq.Structures Require Import Equalities OrdersAlt.
-From Coq.Structures Require OrderedType.
+From Stdlib.Structures Require Import Equalities OrdersAlt.
+From Stdlib.Structures Require OrderedType.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Stdlib Require Export Structures.Orders.Sig.
 Import List.ListNotations.

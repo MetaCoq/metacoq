@@ -1,4 +1,4 @@
-From Coq Require Import List Nat.
+From Stdlib Require Import List Nat.
 From MetaCoq.Template Require Import All.
 
 Import MCMonadNotation ListNotations.

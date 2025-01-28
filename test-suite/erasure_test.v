@@ -47,7 +47,7 @@ MetaCoq Erase  ((fun (X : Set) (x : X) (e : x = x) =>
 MetaCoq Erase ((fun (X : Set) (x : X) => x) True I).
 (* MetaCoq Quote Recursively Definition foo := List.map. *)
 
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 MetaCoq Erase (map negb [true; false]).
 

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import RelationClasses.
+From Stdlib Require Import RelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -7,8 +7,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
      PCUICWellScopedCumulativity PCUICOnFreeVars PCUICOnFreeVarsConv PCUICConfluence PCUICClosedTyp PCUICClosed
      PCUICSigmaCalculus (* for context manipulations *).
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect ssrbool.
+From Equations.Prop Require Import DepElim.
+From Stdlib Require Import ssreflect ssrbool.
 
 Implicit Types cf : checker_flags.
 

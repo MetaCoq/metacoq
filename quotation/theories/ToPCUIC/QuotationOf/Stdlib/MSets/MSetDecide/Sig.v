@@ -1,4 +1,4 @@
-From Coq.MSets Require Import MSetInterface MSetDecide.
+From Stdlib.MSets Require Import MSetInterface MSetDecide.
 From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 

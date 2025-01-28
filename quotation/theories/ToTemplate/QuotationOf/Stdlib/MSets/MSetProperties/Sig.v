@@ -1,4 +1,4 @@
-From Coq.MSets Require Import MSetProperties.
+From Stdlib.MSets Require Import MSetProperties.
 From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Stdlib.Structures Require Import OrdersFacts.Sig.

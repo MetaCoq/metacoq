@@ -293,7 +293,7 @@ Proof.
   intros. simpl. rewrite H. congruence.
 Defined.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Lemma map_skipn {A B} (f : A -> B) (l : list A) (n : nat) : map f (skipn n l) = skipn n (map f l).
 Proof.

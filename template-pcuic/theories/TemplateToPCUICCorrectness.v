@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config EnvMap.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
@@ -2557,7 +2557,7 @@ Proof.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICInstDef PCUICInstConv.
-Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 (* Lemma closed_ctx_map2_set_binder_name (n : nat) (bctx : list aname) (ctx : list context_decl) :
   closedn_ctx n ctx -> closedn_ctx n (map2_bias_left set_binder_name dummy_decl bctx ctx).
 Proof.

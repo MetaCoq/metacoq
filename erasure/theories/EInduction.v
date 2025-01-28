@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import List ssreflect ssrbool.
+From Stdlib Require Import List ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.PCUIC Require Import PCUICSize.

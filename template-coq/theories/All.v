@@ -16,4 +16,5 @@ From MetaCoq.Template Require Export
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *)
      TemplateMonad (* The TemplateMonad *)
-     Loader        (* The plugin *).
+     Loader        (* The plugin *)
+     Lib           (* Meta-programming facilities *).

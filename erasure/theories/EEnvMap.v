@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool Morphisms Setoid ProofIrrelevance.
+From Stdlib Require Import ssreflect ssrbool Morphisms Setoid ProofIrrelevance.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames EnvMap BasicAst.

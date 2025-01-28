@@ -3,7 +3,7 @@ open GlobRef
 open Pp
 
 let resolve (tm : string) : GlobRef.t Lazy.t =
-  lazy (Coqlib.lib_ref tm)
+  lazy (Rocqlib.lib_ref tm)
 
 let r_template_monad_prop_p s = resolve ("metacoq.templatemonad.prop." ^ s)
 let r_template_monad_type_p s = resolve ("metacoq.templatemonad.type." ^ s)

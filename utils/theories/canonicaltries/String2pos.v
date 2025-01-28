@@ -1,7 +1,7 @@
 (** Convert strings to positive numbers.
     The encoding used is the trivial one (8 bits per character). *)
 
-From Coq Require Import String Ascii ZArith Extraction.
+From Stdlib Require Import String Ascii ZArith Extraction.
 From Equations Require Import Equations.
 
 Inductive positive : Set :=

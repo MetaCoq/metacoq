@@ -17,12 +17,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics
   so we also have [red_confluence]: as long as the starting contexts and terms are well-scoped
   confluence holds. *)
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 From Equations Require Import Equations.
-Require Import CRelationClasses CMorphisms.
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+From Stdlib Require Import CRelationClasses CMorphisms.
+From Equations.Prop Require Import DepElim.
+From Equations.Type Require Import Relation Relation_Properties.
 
 Local Ltac intuition_solver ::= auto with *.
 
@@ -1403,6 +1403,16 @@ Proof.
     eapply eq_term_upto_univ_napp_flip; [..|eassumption]; tc.
 Qed.
 
+Lemma flip_PreOrder {A} (R : A -> A -> Prop) :
+  RelationClasses.PreOrder R ->
+  RelationClasses.PreOrder (flip R).
+Proof.
+  intro H.
+  split.
+  - apply H.
+  - intros x y z  r r'. eapply H. all: eassumption.
+Qed.
+
 Lemma red1_eq_term_upto_univ_r {Σ Σ' cmp_universe cmp_sort pb napp Γ u v u'} :
   RelationClasses.PreOrder (cmp_universe Conv) ->
   RelationClasses.PreOrder (cmp_universe pb) ->
@@ -1420,7 +1430,7 @@ Lemma red1_eq_term_upto_univ_r {Σ Σ' cmp_universe cmp_sort pb napp Γ u v u'} 
 Proof.
   intros preorder_univ_conv preorder_sort_pb preorder_sort_conv preoder_sort_pb sub_univ sub_sort hsubst_univ hsubst_sort_conv hsubst_sort_pb h uv.
   destruct (@red1_eq_term_upto_univ_l Σ Σ' (fun pb => flip (cmp_universe pb)) (fun pb => flip (cmp_sort pb)) pb napp Γ u v u') as (v' & r & e).
-  all: eauto using RelationClasses.flip_PreOrder.
+  all: eauto using flip_PreOrder.
   1,2: intros ??; unfold flip; cbn; eauto.
   - red. intros s u1 u2 ru.
     eapply cmp_universe_instance_flip in ru; cbnr.

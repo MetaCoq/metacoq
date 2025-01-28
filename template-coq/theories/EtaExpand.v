@@ -6,7 +6,7 @@
     All dependencies are also expanded.*)
 
 
-From Coq Require Import List PeanoNat Bool Lia.
+From Stdlib Require Import List PeanoNat Bool Lia.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Export
      uGraph        (* The graph of universes *)
@@ -57,7 +57,7 @@ Section Eta.
     let prev_args := map (lift0 needed) args in
     let eta_args := rev_map tRel (seq 0 needed) in
     let remaining := firstn needed (skipn #|args| (rev (smash_context [] (decompose_prod_assum [] ty).1))) in
-    let remaining_subst := subst_context (rev args) 0 remaining in
+    let remaining_subst := rev (subst_context (rev args) 0 (rev remaining)) in
     fold_right (fun d b => Ast.tLambda d.(decl_name) d.(decl_type) b) (mkApps (lift0 needed t) (prev_args ++ eta_args)) remaining_subst.
 
   Definition eta_constructor (ind : inductive) c u args :=
@@ -1253,7 +1253,7 @@ Qed.
 
 Arguments tVar _%_bs.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 Open Scope bs_scope.
 
 Fixpoint lookup_global_env (Σ : global_declarations) (kn : kername) {struct Σ} : option (global_decl × global_declarations)  :=

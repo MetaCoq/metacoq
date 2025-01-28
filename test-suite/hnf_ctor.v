@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String.
-Require Import MetaCoq.Template.Loader.
+From Stdlib Require Import Strings.String.
+From MetaCoq Require Import Template.Loader.
 
 Inductive U : Type :=
 | TT : id U.

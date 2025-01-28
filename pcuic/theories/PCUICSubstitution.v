@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity PCUICUnivSubstitutionConv
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICInstTyp PCUICOnFreeVars.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 (** * Substitution lemmas for typing derivations. Substitution is now derived from a general
@@ -1247,7 +1247,7 @@ Proof.
   apply (subst_compare_decl p).
 Qed.
 
-From Coq Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 
 Section CtxReduction.
   Context {cf : checker_flags}.

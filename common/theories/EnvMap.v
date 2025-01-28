@@ -1,6 +1,6 @@
 
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect RelationClasses OrderedTypeAlt FMapAVL FMapFacts.
+From Stdlib Require Import ssreflect RelationClasses OrderedTypeAlt FMapAVL FMapFacts.
 From MetaCoq.Utils Require Import utils String2pos CanonicalTries.
 From MetaCoq.Common Require Import config uGraph Reflect BasicAst Kernames.
 From Equations Require Import Equations.

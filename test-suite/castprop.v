@@ -1,6 +1,6 @@
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Template Require Import Loader.
-Require Import String.
+From Stdlib Require Import String.
 Set Template Cast Propositions.
 
 Definition foo (x : nat) (p : True) := p.

@@ -1,6 +1,6 @@
-Require Import MetaCoq.Utils.MCTactics.SpecializeBy.
-Require Import MetaCoq.Utils.MCTactics.UniquePose.
-Require Import MetaCoq.Utils.MCTactics.GeneralizeOverHoles.
+From MetaCoq Require Import Utils.MCTactics.SpecializeBy.
+From MetaCoq Require Import Utils.MCTactics.UniquePose.
+From MetaCoq Require Import Utils.MCTactics.GeneralizeOverHoles.
 
 Ltac guarded_specialize_term_under_binders_by' guard_tac H tac :=
   lazymatch type of H with

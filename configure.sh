@@ -8,11 +8,9 @@ make -f Makefile mrproper
 # should already be available in $(COQMF_LIB)/user-contrib/MetaCoq/*
 # For local builds, we set specific dependencies of each subproject in */metacoq-config
 
-# CWD=`pwd`
-
-if command -v coqc >/dev/null 2>&1
+if command -v rocq >/dev/null 2>&1
 then
-    COQLIB=` coqc -where | tr -d '\r' | tr '\\\\' '/'`
+    COQLIB=` rocq c -where | tr -d '\r' | tr '\\\\' '/'`
 
     if [[ "$1" = "local" ]] || [[ "$1" = "--enable-local" ]] || [[ "$1" = "--enable-quick" ]]
     then
@@ -78,5 +76,5 @@ then
     echo ${PLUGIN_DEMO_DEPS} >> test-suite/plugin-demo/metacoq-config
 
 else
-    echo "Error: coqc not found in path"
+    echo "Error: rocq not found in path"
 fi

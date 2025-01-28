@@ -1,5 +1,5 @@
 From MetaCoq.Quotation.ToTemplate Require Import Stdlib.Init.
-From Coq.ssr Require Import ssrbool ssreflect.
+From Stdlib.ssr Require Import ssrbool ssreflect.
 
 #[export] Instance quote_if_spec {A b vT vF} {not_b:Prop} {b' a} {qA : quotation_of A} {qvT : quotation_of vT} {qvF : quotation_of vF} {qnot_b : quotation_of not_b} {quote_not_b : ground_quotable not_b} : ground_quotable (@if_spec A b vT vF not_b b' a) := ltac:(destruct 1; exact _).
 #[export] Instance quote_alt_spec {P:Prop} {b b'} {qP : quotation_of P} {quoteP : ground_quotable P} : ground_quotable (@alt_spec P b b') := ltac:(destruct 1; exact _).

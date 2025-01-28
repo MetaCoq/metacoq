@@ -1,12 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Import Reflect. (* Reflect.eqb has priority over String.eqb *)
 
-Require Import ssreflect.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect.
+From Equations.Prop Require Import DepElim.
 From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
 Set Equations Transparent.

@@ -3,8 +3,8 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Universes BasicAst Primitive Reflect
      Environment EnvironmentTyping.
 From Equations Require Import Equations.
-From Coq Require Import ssreflect.
-From Coq Require Import Uint63 SpecFloat.
+From Stdlib Require Import ssreflect.
+From Stdlib Require Import Uint63 SpecFloat.
 
 Record array_model {term : Type} :=
   { array_level : Level.t;

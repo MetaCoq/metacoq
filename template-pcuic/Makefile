@@ -5,7 +5,7 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat _CoqProject.in >> _CoqProject
 
 Makefile.templatepcuic: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.templatepcuic $(DEPS)
+	rocq makefile -f _CoqProject -o Makefile.templatepcuic $(DEPS)
 
 theory: Makefile.templatepcuic
 	$(MAKE) -f Makefile.templatepcuic

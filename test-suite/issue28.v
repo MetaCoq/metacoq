@@ -1,5 +1,5 @@
-Require Import MetaCoq.Template.All MetaCoq.Utils.bytestring MetaCoq.Template.Pretty.
-Require Export List.
+From MetaCoq Require Import Template.All Utils.bytestring Template.Pretty.
+From Stdlib Require Export List.
 Open Scope bs_scope.
 Import ListNotations.
 Import MCMonadNotation.

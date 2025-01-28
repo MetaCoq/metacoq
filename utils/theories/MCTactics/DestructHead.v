@@ -1,5 +1,5 @@
-Require Import MetaCoq.Utils.MCTactics.Head.
-Require Import MetaCoq.Utils.MCTactics.DestructHyps.
+From MetaCoq Require Import Utils.MCTactics.Head.
+From MetaCoq Require Import Utils.MCTactics.DestructHyps.
 
 Ltac destruct_head_matcher T HT :=
   match head HT with

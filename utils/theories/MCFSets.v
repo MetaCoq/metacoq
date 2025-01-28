@@ -1,5 +1,5 @@
-From Coq.Structures Require Import Equalities Orders OrdersAlt.
-From Coq.FSets Require Import FMapInterface FMapList FMapAVL FMapFullAVL FMapFacts.
+From Stdlib.Structures Require Import Equalities Orders OrdersAlt.
+From Stdlib.FSets Require Import FMapInterface FMapList FMapAVL FMapFullAVL FMapFacts.
 From MetaCoq.Utils Require Import MCReflect MCUtils.
 From MetaCoq.Utils.MCTactics Require Import SpecializeUnderBindersBy DestructHead SplitInContext.
 From Equations.Prop Require Import Classes.

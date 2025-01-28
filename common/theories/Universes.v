@@ -1,8 +1,8 @@
-From Coq Require Import OrdersAlt MSetList MSetAVL MSetFacts MSetProperties MSetDecide FMapAVL.
+From Stdlib Require Import OrdersAlt MSetList MSetAVL MSetFacts MSetProperties MSetDecide FMapAVL.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils MCMSets MCFSets.
 From MetaCoq.Common Require Import BasicAst config.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.

@@ -1,8 +1,8 @@
 From Ltac2 Require Import Ltac2.
-From Coq Require Import Lists.List.
-From Coq Require Import Lia.
-From Coq Require Import Arith.
-From Coq Require Import NArith.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import Lia.
+From Stdlib Require Import Arith.
+From Stdlib Require Import NArith.
 From MetaCoq.Utils Require Import monad_utils.
 From MetaCoq.Template Require Import Loader TemplateMonad.Core.
 

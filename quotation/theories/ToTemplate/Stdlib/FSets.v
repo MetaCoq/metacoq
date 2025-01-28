@@ -1,4 +1,4 @@
-From Coq Require Import Structures.Equalities Structures.OrdersAlt FMapInterface FMapList FMapAVL FMapFullAVL FMapFacts.
+From Stdlib Require Import Structures.Equalities Structures.OrdersAlt FMapInterface FMapList FMapAVL FMapFullAVL FMapFacts.
 From MetaCoq.Utils Require Import MCUtils MCFSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Numbers Stdlib.Init Stdlib.Lists.

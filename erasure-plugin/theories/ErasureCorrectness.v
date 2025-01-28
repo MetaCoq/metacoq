@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssreflect ssrbool.
+From Stdlib Require Import Program ssreflect ssrbool.
 From MetaCoq.Common Require Import Transform config.
 From MetaCoq.Utils Require Import bytestring utils.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
@@ -428,7 +428,7 @@ Proof.
 Qed.
 
 Import MetaCoq.Common.Transform.
-From Coq Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 
 Module ETransformPresFO.
   Section Opt.

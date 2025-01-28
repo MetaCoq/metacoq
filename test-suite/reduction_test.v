@@ -1,10 +1,10 @@
-From Coq Require Import Recdef.
+From Stdlib Require Import Recdef.
 From MetaCoq.Utils Require Import bytestring.
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN.
 From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
-From Coq Require Import String.
+From Stdlib Require Import String.
 Local Open Scope string_scope.
 
 From MetaCoq.Utils Require Import utils bytestring.

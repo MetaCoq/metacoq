@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require CMorphisms.
+From Stdlib Require CMorphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics PCUICSize PCUICLiftSubst
@@ -9,8 +9,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics
      PCUICViews PCUICParallelReduction.
 
 
-Require Import ssreflect ssrbool.
-Require Import Morphisms CRelationClasses.
+From Stdlib Require Import ssreflect ssrbool.
+From Stdlib Require Import Morphisms CRelationClasses.
 From Equations Require Import Equations.
 
 Add Search Blacklist "pred1_rect".

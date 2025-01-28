@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Morphisms Orders Setoid.
+From Stdlib Require Import ssreflect Morphisms Orders Setoid.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Export Kernames.
-From Coq Require Floats.SpecFloat.
+From Stdlib Require Floats.SpecFloat.
 From Equations Require Import Equations.
 
 (** Identifiers that are allowed to be anonymous (i.e. "_" in concrete syntax). *)

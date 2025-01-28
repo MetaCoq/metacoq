@@ -1,15 +1,15 @@
 (* basic.v *)
 
-Require Import BinPos.
-Require Import Lia.
-Require Import Recdef.
-Require Import Stdlib.Lists.List.
-Require Import ZArith.
-Require Import NArith.
-Require Import List Orders POrderedType.
-Require Import Sorted.
-Require Import Stdlib.Sorting.Mergesort.
-Require Import Permutation.
+From Stdlib Require Import BinPos.
+From Stdlib Require Import Lia.
+From Stdlib Require Import Recdef.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import ZArith.
+From Stdlib Require Import NArith.
+From Stdlib Require Import List Orders POrderedType.
+From Stdlib Require Import Sorted.
+From Stdlib Require Import Sorting.Mergesort.
+From Stdlib Require Import Permutation.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -406,8 +406,8 @@ Qed.
 (* clauses.v *)
 Unset Implicit Arguments.
 
-Require Import ZArith List Recdef Stdlib.MSets.MSetInterface Stdlib.Sorting.Mergesort
-               Permutation Stdlib.MSets.MSetAVL Stdlib.MSets.MSetRBT.
+From Stdlib Require Import ZArith List Recdef MSets.MSetInterface Sorting.Mergesort
+               Permutation MSets.MSetAVL MSets.MSetRBT.
 
 (** The clause datatype and related definitions and lemmas *)
 
@@ -958,7 +958,7 @@ constructor 2; auto.
 inversion H1; clear H1; subst; simpl; auto.
 Qed.
 
-Require Import Finite_sets_facts.
+From Stdlib Require Import Finite_sets_facts.
 
 (* from msl/Axioms.v: *)
 

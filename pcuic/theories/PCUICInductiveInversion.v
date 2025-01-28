@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Utf8.
+From Stdlib Require Import Utf8.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
@@ -16,11 +16,11 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICSpine PCUICInductives PCUICWellScopedCumulativity PCUICValidity.
 
-Require Import Equations.Type.Relation_Properties.
-Require Import Equations.Prop.DepElim.
+From Equations.Type Require Import Relation_Properties.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Derive Subterm for term.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Local Set SimplIsCbn.
 

@@ -1,4 +1,4 @@
-From Coq Require Import Structures.Equalities Lists.List Lists.ListDec.
+From Stdlib Require Import Structures.Equalities Lists.List Lists.ListDec.
 From MetaCoq.Utils Require Import MCProd All_Forall ReflectEq MCRelations MCReflect.
 From MetaCoq.Common Require Import Environment Universes.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.

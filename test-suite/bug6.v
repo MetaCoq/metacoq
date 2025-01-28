@@ -1,4 +1,4 @@
-Require Import MetaCoq.Template.Loader.
+From MetaCoq Require Import Template.Loader.
 Import bytestring.
 
 Definition I (t:Type) (x:t) : t := x.

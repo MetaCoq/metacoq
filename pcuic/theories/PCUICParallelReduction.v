@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import RelationClasses CRelationClasses.
+From Stdlib Require Import RelationClasses CRelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICTactics PCUICDepth PCUICCases
@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils P
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
 Set Default Proof Using "Type*".
@@ -235,7 +235,7 @@ Section ParallelReduction.
     | _ => false
     end.
 
-  Reserved Notation "'pred1_ctx'" (at level 8).
+  Reserved Notation "'pred1_ctx'" (at level 0).
   Reserved Notation "'pred1_ctx_over' Γ Γ'" (at level 200, Γ, Γ' at level 9).
 
   Inductive pred1 (Γ Γ' : context) : term -> term -> Type :=

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
+From Stdlib Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes.
 From Equations.Prop Require Import Classes EqDecInstances.
@@ -218,7 +218,7 @@ Module Environment (T : Term).
        decl_body := decl_body x;
        decl_type := decl_type x |}.
 
-  (** Count the number of assumptions in a context (i.e. declarations that do not 
+  (** Count the number of assumptions in a context (i.e. declarations that do not
       contain a body). *)
   Fixpoint context_assumptions (Γ : context) : nat :=
     match Γ with
@@ -327,7 +327,7 @@ Module Environment (T : Term).
         `ind_bodies ,,, ind_params ,,, cstr_args |- cstr_indices`. *)
     cstr_indices : list term;
     (** Full type of the constructor, which can depend on the inductives in the same block :
-        `ind_bodies |- cstr_type`. This should be equal to 
+        `ind_bodies |- cstr_type`. This should be equal to
         `forall ind_params cstr_args, I ind_params cstr_indices` *)
     cstr_type : term;
     (** Number of arguments of the constructor, _without_ let-in arguments and _without_ parameters.
@@ -341,7 +341,7 @@ Module Environment (T : Term).
     proj_name : ident;
     (** Relevance of the projection. *)
     proj_relevance : relevance;
-    (** Type of the projection, wich can depend on the parameters of the inductive 
+    (** Type of the projection, wich can depend on the parameters of the inductive
         and on the object we are projecting from : `ind_params ,,, x |- proj_type`. *)
     proj_type : term;
   }.
@@ -365,21 +365,21 @@ Module Environment (T : Term).
   (** Data associated to a single inductive in a mutual inductive block. *)
   Record one_inductive_body := {
     (** Name of the inductive, without the module path. *)
-    ind_name : ident; 
+    ind_name : ident;
     (** Indices of the inductive, which can depend on the parameters :
         `ind_params |- ind_indices`. *)
     ind_indices : context;
-    (** Sort of the inductive. *) 
-    ind_sort : Sort.t; 
+    (** Sort of the inductive. *)
+    ind_sort : Sort.t;
     (** Full type of the inductive. This should be equal to
         `forall ind_params ind_indices, tSort ind_sort` *)
-    ind_type : term; 
+    ind_type : term;
     (** Allowed eliminations for the inductive. *)
-    ind_kelim : allowed_eliminations; 
+    ind_kelim : allowed_eliminations;
     (** Constructors of the inductive. Order is important. *)
     ind_ctors : list constructor_body;
     (** Names and types of primitive projections, if any. *)
-    ind_projs : list projection_body; 
+    ind_projs : list projection_body;
     (** Relevance of the inductive. *)
     ind_relevance : relevance }.
 

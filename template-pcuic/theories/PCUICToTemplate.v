@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Uint63 FloatOps FloatAxioms.
+From Stdlib Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases.
 Set Warnings "-notation-overridden".
 From MetaCoq.Utils Require Import utils.

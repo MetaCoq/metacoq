@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 From MetaCoq.Common Require Export utils Universes BasicAst Environment Reflect.
 From MetaCoq.Common Require EnvironmentTyping.
 From MetaCoq.PCUIC Require Export PCUICPrimitive.

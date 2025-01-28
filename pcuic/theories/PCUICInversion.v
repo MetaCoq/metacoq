@@ -1,12 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICCumulativity PCUICConfluence PCUICConversion
      PCUICOnFreeVars PCUICClosedTyp PCUICWellScopedCumulativity.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 (* TODO: make wf arguments implicit *)
 Section Inversion.
 

@@ -56,7 +56,7 @@ MetaCoq Run (bc <- tmQuote b ;;
                 bc <- tmUnquote bc ;;
                 tmPrint bc).
 
-Require Import MetaCoq.Template.Pretty.
+From MetaCoq Require Import Template.Pretty.
 Check (eq_refl : print_term (empty_ext empty_global_env) [] true
                       (tConst (MPfile ["test"; "Examples"; "MetaCoq"], "b") [])
                  = "MetaCoq.Examples.test.b").

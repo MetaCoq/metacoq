@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Template Require Import All.
-From Coq Require Init.
+From Stdlib Require Init.
 
 Import MCMonadNotation.
 
@@ -73,7 +73,7 @@ MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 Check Coq.Init.Datatypes.nat.
-MetaCoq Unquote Definition zero_from_syntax := 
+MetaCoq Unquote Definition zero_from_syntax :=
   (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Corelib"], "nat") 0) 0 []).
 Set Printing All.
 (* the function unquote_kn in reify.ml4 is not yet implemented *)

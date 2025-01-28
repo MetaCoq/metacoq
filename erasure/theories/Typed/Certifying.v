@@ -1,7 +1,7 @@
 (** * Term and proof generation for the certifying transforms *)
-From Coq Require Import List.
-From Coq Require Import Ascii.
-From Coq Require Import String.
+From Stdlib Require Import List.
+From Stdlib Require Import Ascii.
+From Stdlib Require Import String.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Template Require Import Ast Checker All.

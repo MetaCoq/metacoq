@@ -7,7 +7,7 @@
 	"settings": {
 
 	// A list of arguments to send to coqtop. Use seperate elements instead of spaces to seperate each argument, especially when a flag expects another trailing argument, e.g. `["-I","./bin"]` instead of `["-I ./bin"]`
-        "coqtop.args": [
+	"coqtop.args": [
 		// "-bt", // get backtraces from Coq on errors
 		"-R", "utils/theories", "MetaCoq.Utils",
 		"-R", "common/theories", "MetaCoq.Common",
@@ -90,7 +90,6 @@
 	    ],
 	 // When enabled, will trim trailing whitespace when saving a file.
 	"files.trimTrailingWhitespace": true,
-	"coqtop.binPath": "_opam/bin",
 	"vscoq.path": "_opam/bin/vscoqtop",
 	"coq-lsp.path": "_opam/bin/coq-lsp",
 	"files.exclude": {
@@ -107,5 +106,8 @@
 		"**/Thumbs.db": true
 	},
 	"coq-lsp.check_only_on_request": true,
+	"coqtop.binPath": "_opam/bin",
+	"coqtop.coqtopExe": "coqtop",
+	"coqtop.coqidetopExe": "coqidetop",
   }
 }

@@ -6,7 +6,7 @@ bugs: Makefile.coq
 	$(MAKE) -f Makefile.coq TIMED=$(TIMED)
 
 Makefile.coq: Makefile _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
+	rocq makefile -f _CoqProject -o Makefile.coq
 
 _CoqProject: _CoqProject.in metacoq-config
 	cat metacoq-config > _CoqProject

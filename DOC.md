@@ -2,7 +2,7 @@
 
 ## Branches and compatibility
 
-**tl;dr** You should do your PRs against [coq-8.18](https://github.com/MetaCoq/metacoq/tree/coq-8.16).
+**tl;dr** You should do your PRs against [coq-8.20](https://github.com/MetaCoq/metacoq/tree/coq-8.20).
 
 Coq's kernel API is not stable yet, and changes there are reflected in MetaCoq's reified structures,
 so we do not ensure any compatibility from version to version. There is one branch for each Coq version.
@@ -10,7 +10,7 @@ so we do not ensure any compatibility from version to version. There is one bran
 The *main branch* or *current branch* is the one which appers when you go on
 [https://github.com/MetaCoq/metacoq](https://github.com/MetaCoq/metacoq).
 Currently (unless you are reading the README of an outdated branch),
-it is the [coq-8.16](https://github.com/MetaCoq/metacoq/tree/coq-8.16).
+it is the [coq-8.20](https://github.com/MetaCoq/metacoq/tree/coq-8.20).
 You should use it both for usage of MetaCoq and development of MetaCoq.
 
 The [main](https://github.com/MetaCoq/metacoq/tree/main) branch is following Coq's master
@@ -21,10 +21,6 @@ stable release of Coq.
 <!-- gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated -->
 <!-- "alpha"-quality `opam` packages. -->
 
-The branches [coq-8.17](https://github.com/MetaCoq/metacoq/tree/coq-8.17) and [coq-8.18](https://github.com/MetaCoq/metacoq/tree/coq-8.18) are being kept in sync.
-The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6) to [coq-8.15](https://github.com/MetaCoq/metacoq/tree/coq-8.16) are frozen.
-
-
 ## Program and Equations
 
 MetaCoq relies on `Program` and `Equations` plugins, however try to avoid `Program` as it
@@ -32,7 +28,7 @@ inserts some JMeq and UIP axioms silently, whereas we try to keep the developmen
 You can use `Equations` to do some dependent induction (`dependent induction`,
 `dependent destruction`, `depelim`). You may need to add:
 ```
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 ```
 
 ## ident vs. qualid. vs kername
@@ -89,7 +85,7 @@ a fresh level when `MetaCoq Strict Unquote Universe Mode` is off.
 
 ## Dependency graph between files
 
-Generated on 2022/07/01, sources [there](https://github.com/MetaCoq/metacoq/tree/coq-8.16/dependency-graph).
+Generated on 2022/07/01, sources [there](https://github.com/MetaCoq/metacoq/tree/coq-8.20/dependency-graph).
 
 <center>
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/depgraph-2022-07-01.png"
@@ -104,6 +100,6 @@ The file `README.md` in https://github.com/MetaCoq/metacoq.github.io is supposed
 `README.md` in [https://github.com/MetaCoq/metacoq/](https://github.com/MetaCoq/metacoq/).
 
 That's why we can't use relative links and have to use absolute ones.
-E.g. [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.16/INSTALL.md) and not [INSTALL.md](INSTALL.md).
+E.g. [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.20/INSTALL.md) and not [INSTALL.md](INSTALL.md).
 
 Thus, when switching to a new default branch, we have to search and replace the old branch with the new one.

@@ -1,5 +1,5 @@
-From Coq.Structures Require Import Equalities Orders.
-From Coq.MSets Require Import MSetList.
+From Stdlib.Structures Require Import Equalities Orders.
+From Stdlib.MSets Require Import MSetList.
 From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Stdlib.MSets Require Import MSetInterface.Sig.

@@ -1,5 +1,5 @@
 
-From Coq Require Import Extraction NArith ZArith.
+From Stdlib Require Import Extraction NArith ZArith.
 
 (** Disclaimer: trying to obtain efficient certified programs
     by extracting [Z] into [int] is definitively *not* a good idea.

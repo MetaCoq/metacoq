@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CRelationClasses.
+From Stdlib Require Import CRelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICInduction PCUICReduction PCUICClosed.
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
 (** * Closed single substitution:

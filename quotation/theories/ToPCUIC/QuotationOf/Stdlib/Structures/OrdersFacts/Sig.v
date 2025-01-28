@@ -1,4 +1,4 @@
-From Coq.Structures Require Import Equalities Orders OrdersFacts.
+From Stdlib.Structures Require Import Equalities Orders OrdersFacts.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Stdlib Require Export Structures.Orders.Sig.
 

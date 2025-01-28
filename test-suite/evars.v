@@ -1,4 +1,4 @@
-From Coq Require Import String List.
+From Stdlib Require Import String List.
 From MetaCoq.Template Require Import Ast Loader.
 Import ListNotations.
 Definition bAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.

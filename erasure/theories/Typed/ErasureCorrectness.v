@@ -12,7 +12,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames.
-From Coq Require Import List.
+From Stdlib Require Import List.
 
 Import ListNotations.
 Import PCUICEnvironment.

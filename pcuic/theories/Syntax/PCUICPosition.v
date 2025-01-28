@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import RelationClasses ssrbool.
+From Stdlib Require Import RelationClasses ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
@@ -11,7 +11,7 @@ Import MCMonadNotation.
 
 Import MCMonadNotation.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Local Set Keyed Unification.
@@ -1780,7 +1780,7 @@ Definition context_env_clos (R : context -> term -> term -> Type) Γ u v :=
     R (Γ ,,, stack_context π) u' v' ×
     (u = zipc u' π /\ v = zipc v' π).
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 (* Lemma fill_mfix_hole_length mfix t : #|fill_mfix_hole mfix t| = #| *)
 

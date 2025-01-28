@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
@@ -8,9 +8,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyp
      PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
-Require Import CRelationClasses CMorphisms.
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+From Stdlib Require Import CRelationClasses CMorphisms.
+From Equations.Prop Require Import DepElim.
+From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
 
 Local Ltac intuition_solver ::= auto with *.

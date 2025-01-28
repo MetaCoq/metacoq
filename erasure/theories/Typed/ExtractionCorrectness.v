@@ -1,4 +1,4 @@
-From Coq Require Import List ssreflect ssrbool.
+From Stdlib Require Import List ssreflect ssrbool.
 From MetaCoq.Erasure.Typed Require Import ErasureCorrectness.
 From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure.Typed Require Import Extraction.
@@ -579,7 +579,7 @@ Proof.
       now eapply PCUICWfEnvImpl.wf_fresh_globals.
 Qed.
 
-From Coq Require Import String.
+From Stdlib Require Import String.
 Local Open Scope string_scope.
 
 Import MCMonadNotation.

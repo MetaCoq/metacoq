@@ -4,7 +4,7 @@ From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
     PCUICLiftSubst.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -331,7 +331,7 @@ Proof.
   move=> /mk_ctx_subst_spec /context_subst_length //.
 Qed.
 
-From Coq Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 From MetaCoq.PCUIC Require Import PCUICClosed.
 Lemma closedn_ctx_subst_forall n Δ l s :
   context_subst Δ l s ->

@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   (* PCUICGuardCondition *) (* PCUICGlobalEnv *).
 From Equations Require Import Equations.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Set Default Goal Selector "!".
 Implicit Types (cf : checker_flags).

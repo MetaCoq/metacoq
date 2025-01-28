@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssreflect ssrbool.
-Require PeanoNat.
+From Stdlib Require Import ssreflect ssrbool.
+From Stdlib Require PeanoNat.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Reflect.
 From MetaCoq.Template Require Import Ast AstUtils Induction UnivSubst WfAst Typing.

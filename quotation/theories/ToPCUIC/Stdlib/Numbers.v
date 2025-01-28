@@ -1,11 +1,11 @@
-From Coq.Numbers Require Import BinNums DecimalFacts HexadecimalFacts
+From Stdlib.Numbers Require Import BinNums DecimalFacts HexadecimalFacts
      Cyclic.Int63.PrimInt63 Cyclic.Int63.Uint63
      Cyclic.Abstract.CyclicAxioms
      Cyclic.Abstract.DoubleType
      Cyclic.Int63.CarryType
 .
 
-From Coq Require Import ZArith.
+From Stdlib Require Import ZArith.
 From MetaCoq.Quotation.ToPCUIC Require Import Stdlib.Init.
 
 #[export] Instance quote_positive : ground_quotable positive := ltac:(induction 1; exact _).

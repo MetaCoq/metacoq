@@ -1,12 +1,12 @@
-From Coq Require Import Bool List Arith Lia.
+From Stdlib Require Import Bool List Arith Lia.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnv.
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 

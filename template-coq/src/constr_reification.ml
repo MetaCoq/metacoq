@@ -55,13 +55,13 @@ struct
 
   let resolve (tm : string) : Constr.t Lazy.t =
     lazy (
-      let tm_ref = Coqlib.lib_ref tm in
+      let tm_ref = Rocqlib.lib_ref tm in
       UnivGen.constr_of_monomorphic_global (Global.env ()) tm_ref
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
 
   let resolve_ref (tm : string) : Names.GlobRef.t Lazy.t =
-    lazy (Coqlib.lib_ref tm)
+    lazy (Rocqlib.lib_ref tm)
 
   let ast s = resolve ("metacoq.ast." ^ s)
   let template s = resolve ("metacoq.template." ^ s)

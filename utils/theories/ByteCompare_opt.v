@@ -1,4 +1,4 @@
-From Coq Require Import Byte.
+From Stdlib Require Import Byte.
 
 Definition is_byte_x00 (b : byte) := match b with | x00 => true | _ => false end.
 Definition is_byte_x01 (b : byte) := match b with | x01 => true | _ => false end.

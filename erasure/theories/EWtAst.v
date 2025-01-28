@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import utils BasicAst Universes.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ECSubst ELiftSubst EGlobalEnv.
@@ -408,7 +408,7 @@ Section view.
 
 End view.
 
-From Coq Require Import Relation_Definitions.
+From Stdlib Require Import Relation_Definitions.
 
 Section test_view.
   Context (Σ : global_context).

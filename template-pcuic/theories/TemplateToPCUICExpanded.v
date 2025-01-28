@@ -1,5 +1,5 @@
 From Equations Require Import Equations.
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality EtaExpand TemplateProgram.

@@ -1,4 +1,4 @@
-From Coq Require Import Recdef.
+From Stdlib Require Import Recdef.
 
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
@@ -7,7 +7,7 @@ From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
 
 From MetaCoq.ErasurePlugin Require Import Erasure.
 
-From Coq Require Import String.
+From Stdlib Require Import String.
 Local Open Scope string_scope.
 
 From MetaCoq.Utils Require Import utils bytestring.
@@ -74,14 +74,14 @@ Set MetaCoq Timing.
 Time MetaCoq Run (tmEval hnf vplus0123 >>= erase).
 
 (** Cofix *)
-From Coq Require Import StreamMemo.
+From Stdlib Require Import StreamMemo.
 
 MetaCoq Quote Recursively Definition memo := memo_make.
 
 Definition testmemo := Eval lazy in test memo.
 
 (** Cofix *)
-From Coq Require Import StreamMemo.
+From Stdlib Require Import StreamMemo.
 
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=
@@ -144,7 +144,7 @@ MetaCoq Quote Recursively Definition p_arden_size := arden_size.
 Definition P_arden_size := Eval lazy in test p_arden_size.
 
 (** SASL tautology function: variable arity **)
-From Coq Require Import Bool.
+From Stdlib Require Import Bool.
 Fixpoint tautArg (n:nat) : Type :=
   match n with
     | 0 => bool
@@ -327,11 +327,11 @@ Qed.
  *)
 End HetList.
 
-Require Import Coq.Arith.Compare_dec.
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Arith.Peano_dec.
-Require Import Arith Init.Wf.
-Require Import Program.
+From Stdlib Require Import Arith.Compare_dec.
+From Stdlib Require Import Arith.PeanoNat.
+From Stdlib Require Import Arith.Peano_dec.
+From Stdlib Require Import Arith Init.Wf.
+From Stdlib Require Import Program.
 Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
 
@@ -363,7 +363,7 @@ provedCopy). *)
 
 Print P_provedCopyx.
 
-From Coq Require Import Streams.
+From Stdlib Require Import Streams.
 
 CoFixpoint ones : Stream nat := Cons 1 ones.
 

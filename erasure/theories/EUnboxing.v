@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Utf8 Program.
+From Stdlib Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames Primitive BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EArities
@@ -13,7 +13,7 @@ Import MCMonadNotation.
 From Equations Require Import Equations.
 Set Equations Transparent.
 Local Set Keyed Unification.
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 (** We assume [Prop </= Type] and universes are checked correctly in the following. *)
 Local Existing Instance extraction_checker_flags.

@@ -1,5 +1,5 @@
 From MetaCoq.Template Require Import All.
-Require Import List Arith.
+From Stdlib Require Import List Arith.
 Import ListNotations MCMonadNotation.
 Open Scope bs_scope.
 
@@ -148,8 +148,8 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 MetaCoq Quote Recursively Definition qfoo3 := foo3.
 (* Compute qfoo3. *)
 
-Require Import MetaCoq.Utils.monad_utils. Import MCMonadNotation.
-Require Import MetaCoq.Template.TemplateMonad.Core.
+From MetaCoq Require Import Utils.monad_utils. Import MCMonadNotation.
+From MetaCoq Require Import Template.TemplateMonad.Core.
 
 (* MetaCoq Run (tmQuoteInductive (cp "foo") >>= tmPrint).
 MetaCoq Run (tmQuoteInductive (cp "foo2") >>= tmPrint).
@@ -161,8 +161,8 @@ MetaCoq Quote Recursively Definition qTT := TT.
 Polymorphic Inductive TT2@{i j} : Type@{j} := tt2 : Type@{i} -> TT2.
 MetaCoq Quote Recursively Definition qTT2 := TT2.
 
-Require Import MetaCoq.Utils.utils.
-Require Import List. Import ListNotations.
+From MetaCoq Require Import Utils.utils.
+From Stdlib Require Import List. Import ListNotations.
 
 Module toto.
 
@@ -229,7 +229,7 @@ Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 Polymorphic Definition F@{i} := Type@{i}.
 
 MetaCoq Quote Definition qT := Eval compute in F.
-Require Import List. Import ListNotations.
+From Stdlib Require Import List. Import ListNotations.
 (* NOTE: the command below doesn't work -- gives Error: Anomaly "Universe Var(1) undefined." *)
 (* Fail MetaCoq Unquote Definition T'2 := *)
 (*   (tSort (Universe.make (Level.lvar 1))). *)

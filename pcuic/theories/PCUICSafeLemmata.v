@@ -13,8 +13,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICOnFreeVars  PCUICSpine PCUICInductives
      PCUICWeakeningConv PCUICWeakeningTyp PCUICContexts PCUICInductiveInversion.
 
-Require Import ssreflect ssrbool.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect ssrbool.
+From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
 
 Local Set Keyed Unification.

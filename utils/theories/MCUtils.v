@@ -1,4 +1,4 @@
-From Coq Require Import Nat ZArith Bool.
+From Stdlib Require Import Nat ZArith Bool.
 
 From MetaCoq.Utils Require Export MCPrelude
         MCReflect
@@ -202,7 +202,7 @@ Qed.
 Axiom todo : string -> forall {A}, A.
 Ltac todo s := exact (todo s).
 
-From Coq Require Import Extraction.
+From Stdlib Require Import Extraction.
 Extract Constant todo => "fun s -> failwith (Caml_bytestring.caml_string_of_bytestring s)".
 
 From Ltac2 Require Import Init.

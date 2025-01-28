@@ -1,6 +1,6 @@
-From Coq Require Import Bool RelationClasses.
-Require Import ssreflect.
-Require Import CRelationClasses.
+From Stdlib Require Import Bool RelationClasses.
+From Stdlib Require Import ssreflect.
+From Stdlib Require Import CRelationClasses.
 
 Local Coercion is_true : bool >-> Sortclass.
 

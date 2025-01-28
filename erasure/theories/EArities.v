@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -16,7 +16,7 @@ From MetaCoq.Erasure Require Import Extract.
 
 Notation "Σ ⊢p s ⇓ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
-Require Import Program.
+From Stdlib Require Import Program.
 From Equations Require Import Equations.
 
 Local Existing Instance extraction_checker_flags.

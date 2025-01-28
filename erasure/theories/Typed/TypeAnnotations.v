@@ -6,7 +6,8 @@ From MetaCoq.Erasure.Typed Require Import Extraction.
 From MetaCoq.Erasure.Typed Require Import Optimize.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
-From Coq Require Import VectorDef.
+Local Set Warnings "-warn-library-file-stdlib-vector".
+From Stdlib Require Import VectorDef.
 From Equations Require Import Equations.
 From MetaCoq.Erasure Require Import Extract.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.

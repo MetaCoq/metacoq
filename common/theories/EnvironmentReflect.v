@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
+From Stdlib Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes Environment Reflect.
 From Equations.Prop Require Import Classes EqDecInstances.

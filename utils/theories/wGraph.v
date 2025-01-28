@@ -1,7 +1,7 @@
-Require Import ZArith Zcompare Lia ssrbool.
-Require Import MSetAVL MSetFacts MSetProperties.
+From Stdlib Require Import ZArith Zcompare Lia ssrbool.
+From Stdlib Require Import MSetAVL MSetFacts MSetProperties.
 From MetaCoq.Utils Require Import MCUtils.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 Local Open Scope Z_scope.
@@ -274,7 +274,7 @@ End Nbar.
 
 Import Nbar.
 
-Require Import MSetDecide MSetInterface.
+From Stdlib Require Import MSetDecide MSetInterface.
 
 Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module E := V).
   Module VSetFact := WFactsOn V VSet.

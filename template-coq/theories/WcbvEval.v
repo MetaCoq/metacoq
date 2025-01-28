@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CRelationClasses.
+From Stdlib Require Import CRelationClasses.
 From MetaCoq.Utils Require Import utils MCList.
 From MetaCoq.Common Require Import config Environment Reflect.
 From MetaCoq.Template Require Import Ast AstUtils LiftSubst UnivSubst WfAst TypingWf Typing.
 
-Require Import ssreflect ssrbool.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect ssrbool.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 (** * Weak-head call-by-value evaluation strategy.

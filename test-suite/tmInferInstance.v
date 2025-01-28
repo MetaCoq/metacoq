@@ -1,4 +1,4 @@
-Require Import MetaCoq.Template.All.
+From MetaCoq Require Import Template.All.
 Require Export String List.
 
 Import MCMonadNotation.

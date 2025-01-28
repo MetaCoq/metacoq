@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Utf8 Program.
+From Stdlib Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
@@ -7,7 +7,7 @@ From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst ECSubst
   EWellformed.
 
 From Equations Require Import Equations.
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 Set Default Proof Using "Type*".
 

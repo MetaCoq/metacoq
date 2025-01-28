@@ -1,5 +1,5 @@
-From Coq Require Import List.
-From Coq Require Import ssrbool.
+From Stdlib Require Import List.
+From Stdlib Require Import ssrbool.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Erasure Require Import EPrimitive EAst.

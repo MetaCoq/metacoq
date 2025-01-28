@@ -1,6 +1,6 @@
-From Coq Require Import Lia Arith Bool List Program.
+From Stdlib Require Import Lia Arith Bool List Program.
 From MetaCoq.Utils Require Import MCPrelude ReflectEq.
-From Coq.ssr Require Import ssreflect.
+From Stdlib.ssr Require Import ssreflect.
 From Equations Require Import Equations.
 Import ListNotations.
 

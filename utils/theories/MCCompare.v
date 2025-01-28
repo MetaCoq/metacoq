@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect Extraction OrderedType Orders.
+From Stdlib Require Import ssreflect Extraction OrderedType Orders.
 From Equations Require Import Equations.
 
 Lemma CompareSpec_Proper : Proper (iff ==> iff ==> iff ==> Logic.eq ==> iff) CompareSpec.

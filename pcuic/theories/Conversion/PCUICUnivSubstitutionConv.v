@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect CRelationClasses.
+From Stdlib Require Import ssreflect CRelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction
@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInducti
      PCUICReduction PCUICWeakeningEnv
      PCUICClosed PCUICPosition.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags).
@@ -1738,8 +1738,8 @@ Qed.
 
 Definition wf_global_ext {cf : checker_flags} Σ ext := wf_ext_wk (Σ, ext).
 
-Require Import Morphisms.
-Require Import ssreflect.
+From Stdlib Require Import Morphisms.
+From Stdlib Require Import ssreflect.
 Set SimplIsCbn.
 
 Section SubstIdentity.

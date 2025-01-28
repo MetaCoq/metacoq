@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
-From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
+From Stdlib Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Universes Kernames.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 #[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Uint63.int :=
@@ -260,7 +260,7 @@ Proof.
   f_equal. apply uip.
 Qed.
 
-Require Import RelationClasses.
+From Stdlib Require Import RelationClasses.
 
 Lemma constraint_lt_irrel (x y : UnivConstraint.t) (l l' : UnivConstraint.lt_ x y) : l = l'.
 Proof.

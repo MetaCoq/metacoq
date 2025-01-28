@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
@@ -13,10 +13,10 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactic
      PCUICWellScopedCumulativity
      PCUICInductiveInversion.
 
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+From Equations.Type Require Import Relation Relation_Properties.
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Implicit Types (Σ : global_env_ext).
 

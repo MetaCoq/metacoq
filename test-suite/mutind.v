@@ -1,4 +1,4 @@
-Require Import MetaCoq.Template.Loader.
+From MetaCoq Require Import Template.Loader.
 
 Section with_T.
   Variable T : Type.

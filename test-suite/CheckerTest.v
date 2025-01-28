@@ -1,5 +1,5 @@
 (* -*- coq-prog-args : ("-type-in-type") -*-  *)
-Require Import MetaCoq.Checker.Loader.
+From MetaCoq Require Import Checker.Loader.
 Definition foo := 2 * 2.
 
 MetaCoq Check foo.

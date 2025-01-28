@@ -1,5 +1,5 @@
-From Coq Require Import List.
-From Coq Require Import String.
+From Stdlib Require Import List.
+From Stdlib Require Import String.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst EProgram.

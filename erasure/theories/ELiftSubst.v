@@ -2,7 +2,7 @@
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
 
@@ -115,7 +115,7 @@ Notation closed t := (closedn 0 t).
 
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
-Require Import PeanoNat.
+From Stdlib Require Import PeanoNat.
 Import Nat.
 
 Lemma lift_rel_ge :

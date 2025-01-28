@@ -1,6 +1,6 @@
 
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssreflect.
+From Stdlib Require Import Program ssreflect.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
@@ -67,7 +67,7 @@ Proof.
   split. eauto. econstructor. eauto.
 Qed.
 
-Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 
 (* TODO: Figure out whether this lemma (and [erases]) should use [strictly_extends_decls] or [extends]. -Jason Gross *)
 Lemma erases_extends :
@@ -154,7 +154,7 @@ Proof.
     now apply All_local_env_app_inv in X1.
 Qed.
 
-Require Import MetaCoq.PCUIC.PCUICInversion.
+From MetaCoq Require Import PCUIC.PCUICInversion.
 Derive Signature for erases.
 
 Lemma erases_ctx_ext (Σ : global_env_ext) Γ Γ' t t' :

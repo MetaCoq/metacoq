@@ -6,8 +6,8 @@ From MetaCoq.PCUIC Require Import
   PCUICReduction PCUICEquality PCUICConfluence PCUICUnivSubstitutionConv
   PCUICUnivSubstitutionTyp.
 
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
+From Equations.Prop Require Import DepElim.
+From Stdlib Require Import ssreflect.
 
 (** We assume normalization of the reduction.
     We state is as well-foundedness of the reduction.

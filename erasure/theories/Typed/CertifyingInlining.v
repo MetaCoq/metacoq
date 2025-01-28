@@ -2,9 +2,9 @@
 
 (** Essentially, just an adaptaion of the inlining pass on the erased representation.
  After the pass is applied we generate proofs that the original and the transformed terms are equal in the theory of Coq. The proofs are just by [eq_refl], since the terms are convertible *)
-From Coq Require Import List.
-From Coq Require Import String.
-From Coq Require Import Bool.
+From Stdlib Require Import List.
+From Stdlib Require Import String.
+From Stdlib Require Import Bool.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import CertifyingBeta.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.

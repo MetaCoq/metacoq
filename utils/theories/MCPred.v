@@ -1,4 +1,4 @@
-From Coq Require Import List Bool Arith ssreflect ssrbool Morphisms Lia.
+From Stdlib Require Import List Bool Arith ssreflect ssrbool Morphisms Lia.
 From MetaCoq.Utils Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
 

@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICConversion
      PCUICWeakeningEnvTyp PCUICClassification.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
-From Coq Require Import Program ssreflect.
+From Stdlib Require Import Program ssreflect.
 
 Local Existing Instance extraction_checker_flags.
 

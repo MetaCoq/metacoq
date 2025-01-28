@@ -1,4 +1,4 @@
-From Coq Require Import Arith List.
+From Stdlib Require Import Arith List.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import
      PCUICPrimitive PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWeakeningEnv PCUICWeakeningEnvTyp.

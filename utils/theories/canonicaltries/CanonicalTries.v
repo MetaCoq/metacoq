@@ -5,7 +5,7 @@
    Copyright: Andrew W. Appel and Inria.
    License: BSD-3-Clause. *)
 
-From Coq Require Import Program FunctionalExtensionality.
+From Stdlib Require Import Program FunctionalExtensionality.
 From MetaCoq.Utils Require Import String2pos.
 
 (* To avoid useless definitions of inductors in extracted code. *)

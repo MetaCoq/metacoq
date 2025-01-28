@@ -1,5 +1,5 @@
 (** This file provides the main function for invoking our extraction. *)
-From Coq Require Import String.
+From Stdlib Require Import String.
 From MetaCoq.Erasure.Typed Require Import Erasure.
 From MetaCoq.Erasure.Typed Require Import Optimize.
 From MetaCoq.Erasure.Typed Require OptimizePropDiscr.

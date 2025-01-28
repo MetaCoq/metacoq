@@ -1,4 +1,4 @@
-From Coq Require Import Strings.Byte NArith.BinNat.
+From Stdlib Require Import Strings.Byte NArith.BinNat.
 
 (* To make byte comparison more efficient and avoid reallocating the same number
   many times, we precompute the representation in N. *)

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICReduction
@@ -162,9 +162,9 @@ Proof.
   now rewrite (abstract_env_irr X H H0).
 Defined.
 
-Require Import MSetFacts.
+From Stdlib Require Import MSetFacts.
 
-Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 
 Global Instance consistent_proper : Proper (CS.Equal ==> iff) consistent.
 Proof.

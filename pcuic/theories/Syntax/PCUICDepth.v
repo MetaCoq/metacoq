@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Program Lia BinPos Compare_dec Bool.
+From Stdlib Require Import ssreflect Program Lia BinPos Compare_dec Bool.
 From MetaCoq.Utils Require Import utils LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICSize PCUICInduction.
-From Coq Require Import List.
+From Stdlib Require Import List.
 From Equations Require Import Equations.
 From Equations.Prop Require Import Subterm.
 Import PCUICEnvTyping.

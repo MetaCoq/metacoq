@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Bool.
+From Stdlib Require Import Bool.
 From MetaCoq.Utils Require Import MCPrelude.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 (** * Notion of reflection for Type-based properties *)

@@ -1,4 +1,4 @@
-From Coq Require Import List String Arith Lia ssreflect ssrbool Morphisms.
+From Stdlib Require Import List String Arith Lia ssreflect ssrbool Morphisms.
 Import ListNotations.
 From Equations Require Import Equations.
 Set Equations Transparent.

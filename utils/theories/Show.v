@@ -1,4 +1,4 @@
-From Coq Require Import PArith Sint63 String Uint63 PrimFloat SpecFloat FloatOps PString.
+From Stdlib Require Import PArith Sint63 String Uint63 PrimFloat SpecFloat FloatOps PString.
 From MetaCoq.Utils Require Import bytestring MCString.
 
 (* Circumventing https://github.com/coq/coq/issues/19150 (via PString). *)

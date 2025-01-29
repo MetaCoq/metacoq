@@ -58,6 +58,7 @@ jobs:
               opam config list; opam repo list; opam list
               opam remove -y rocq-core rocq-runtime rocq-stdlib rocq-prover coq-core coq-stdlib coqide-server coq-stdlib coq
               opam pin remove -y rocq-core rocq-runtime rocq-stdlib rocq-prover coq-core coq-stdlib coqide-server coq-stdlib coq
+              opam pin remove -n dune
               opam pin add -y coq 9.0+rc1
               opam install -y coq.9.0+rc1
             endGroup

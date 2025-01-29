@@ -1,19 +1,19 @@
 #/usr/bin/env bash
 
-if (($# < 4))
+if (($# < 3))
 then
     echo "Usage: make-opam-files.sh ../opam/released/packages <version> <tag> <package-url>"
     exit 0
 fi
 
-archive=`basename $4`
-tag=$3
+archive=`basename $3`
+# tag=$3
 
 echo "Target directory: " $1
 echo "Target version: " $2
-echo "Releases package: " $4
+echo "Releases package: " $3
 echo "Archive:" $archive
-echo "Tag:" $tag
+# echo "Tag:" $tag
 
 if [ -f $archive ]
 then
@@ -21,7 +21,7 @@ then
     rm $archive
 fi
 
-wget $4
+wget $3
 
 hash=`shasum -a 512 $archive | cut -f 1 -d " "`
 
@@ -29,9 +29,9 @@ echo "Shasum = " $hash
 
 echo "Uploading to release assets"
 
-gh release upload $tag $archive
+# gh release upload $tag $archive
 
-release=https://github.com/MetaCoq/metacoq/releases/download/$tag/$archive
+# release=https://github.com/MetaCoq/metacoq/releases/download/$tag/$archive
 
 skipline=""
 
@@ -42,9 +42,9 @@ do
     echo $opamf;
     mkdir -p $1/$opamf/$opamf.$2
     skipline="$skipline $opamf.$2"
-    gsed -e "/^version:.*/d" $f > $target
+    sed -e "/^version:.*/d" $f > $target
     echo url { >> $target
-    echo "  src:" \"$release\" >> $target
+    echo "  src:" \"$3\" >> $target
     echo "  checksum:" \"sha512=$hash\" >> $target
     echo } >> $target
 done

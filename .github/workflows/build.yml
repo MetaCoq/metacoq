@@ -24,10 +24,10 @@ jobs:
     strategy:
       matrix:
         coq_version:
-          - 'dev'
+          - '9.0+rc1'
         ocaml_version:
           - '4.14-flambda'
-          - '4.09-flambda'
+          # - '4.09-flambda'
         target: [ local, opam ]
       fail-fast: true
 

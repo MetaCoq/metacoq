@@ -18,6 +18,8 @@ Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Ini
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
+Extraction Inline Program.Wf.Fix_F_sub Program.Wf.Fix_sub.
+
 Extraction Inline PCUICSafeConversion.Ret.
 
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].

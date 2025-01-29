@@ -35,12 +35,6 @@ Set Extraction Output Directory "gen-src".
 (* Silence the warnings for specifications axioms of int63 *)
 Set Warnings "-extraction-logical-axiom".
 (* Floats *)
-(* Extraction Library Zeven.
-Extraction Library Zeven.
-Extraction Library ZArith_dec.
-Extraction Library Sumbool.
-Extraction Library Zbool.
-Extraction Library SpecFloat. *)
 Separate Extraction FloatOps.Prim2SF.
 
 Recursive Extraction Library Extractable.

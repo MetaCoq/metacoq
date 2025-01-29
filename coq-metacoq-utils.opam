@@ -29,8 +29,8 @@ install: [
 ]
 depends: [
   "stdlib-shims"
-  "coq" { = "dev" }
-  "coq-equations" { = "dev" }
+  "rocq-prover" { >= "9.0~" & != "9.0.dev" & < "10" }
+  # "coq-equations" { = "dev" }
 ]
 synopsis: "The utility library of Template Coq and PCUIC"
 description: """

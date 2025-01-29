@@ -31,13 +31,6 @@ then
     done
     cd ..
 
-    # confusion between Init.Wf and Program.Wf
-    if [ -f src/wf.ml ]; then
-        mv src/wf.ml src/wf0.ml
-        mv src/wf.mli src/wf0.mli
-        ${SED} -i -e "s/open Wf/open Wf0/" src/pCUICSafeChecker.ml
-    fi;
-
     # Remove extracted modules already linked in the template_coq plugin.
     echo "Removing:" $files
     rm -f $files

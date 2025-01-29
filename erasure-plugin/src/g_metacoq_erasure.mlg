@@ -12,7 +12,7 @@ open Tm_util
 open Erasure0
 
 open Stdarg
-open Pcoq.Prim
+open Procq.Prim
 open Ltac_plugin
 open Tacexpr
 open Tacinterp

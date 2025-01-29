@@ -45,7 +45,7 @@ jobs:
       - name: Docker-Coq-Action
         uses: coq-community/docker-coq-action@v1
         with:
-          coq_version: ${{ matrix.coq_version }}
+          coq_version: ${{ 'dev' }}
           ocaml_version: ${{ matrix.ocaml_version }}
           before_script: |
             startGroup "Workaround permission issue"
@@ -56,6 +56,10 @@ jobs:
             startGroup "Print opam config"
               sudo chown -R coq:coq .
               opam config list; opam repo list; opam list
+              opam pin remove -y rocq-core
+              opam pin remove -y coq
+              opam pin add -y coq 9.0+rc1
+              opam install coq.9.0+rc1
             endGroup
           script: |
             startGroup "Build project"

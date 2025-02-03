@@ -609,7 +609,7 @@ struct
            (fun uctx -> Q.quote_univ_contextset uctx) Univ.ContextSet.empty)
     in
     let retro =
-      let retro = env.Environ.retroknowledge in
+      let retro = Environ.retroknowledge env in
       let quote_retro = Option.map (fun c -> Q.quote_kn (Names.Constant.canonical c)) in
       let pre =
         { Q.retro_int63 = quote_retro retro.Retroknowledge.retro_int63 ;

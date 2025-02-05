@@ -281,8 +281,15 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
        in
        let priv = unquote_map_option unquote_bool priv in
        let ctx, univs = match univs with
-       | UState.Monomorphic_entry ctx ->
-          if template then Univ.ContextSet.empty, Entries.Template_ind_entry { univs = ctx; pseudo_sort_poly = TemplateUnivOnly }
+         | UState.Monomorphic_entry ctx ->
+           if template then
+             let mk_anon_names u =
+               let qs, us = UVars.Instance.to_array u in
+               Array.make (Array.length qs) Anonymous, Array.make (Array.length us) Anonymous
+             in
+             let uctx = UVars.UContext.of_context_set mk_anon_names Sorts.QVar.Set.empty ctx in
+             let default_univs = UVars.UContext.instance uctx in
+             Univ.ContextSet.empty, Entries.Template_ind_entry { uctx; default_univs }
           else ctx, Entries.Monomorphic_ind_entry
        | UState.Polymorphic_entry uctx -> Univ.ContextSet.empty, Entries.Polymorphic_ind_entry uctx
        in

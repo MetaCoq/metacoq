@@ -272,9 +272,6 @@ module RetypeMindEntry =
       | Entries.Template_ind_entry uctx -> evm
       | Entries.Polymorphic_ind_entry uctx ->
         let qs, (us, csts) = UVars.UContext.to_context_set uctx in
-        let qs = Sorts.Quality.Set.fold (fun q qs -> match q with
-            | QConstant _ -> assert false
-            | QVar q -> Sorts.QVar.Set.add q qs) qs Sorts.QVar.Set.empty in
         Evd.merge_sort_context_set (UState.UnivFlexible false) evm ((qs,us),csts)
     in
     let evm, mind = infer_mentry_univs env evm mind in

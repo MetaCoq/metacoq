@@ -6,10 +6,7 @@ open Pp
 open Tm_util
 open Reification
 
-let inductive_sort mip =
-  match mip.mind_arity with
-  | RegularArity s -> s.mind_sort
-  | TemplateArity ar -> ar.template_level
+let inductive_sort mip = mip.mind_sort
 
 let cast_prop = ref (false)
 
@@ -456,9 +453,7 @@ struct
           (* TODO quote the real squash data instead of approximating with a sort family *)
           let kelim = match oib.Declarations.mind_squashed with
             | None -> Sorts.InType
-            | Some _ -> match oib.mind_arity with
-              | TemplateArity _ -> InType
-              | RegularArity s -> Sorts.family s.mind_sort
+            | Some _ -> Sorts.family oib.mind_sort
           in
           let sf = Q.quote_sort_family kelim in
             (Q.quote_ident oib.mind_typename, indices, indsort, indty, sf,

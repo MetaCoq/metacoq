@@ -135,7 +135,7 @@ struct
   let unquote_evar env evm id args =
     if constr_equall id tfresh_evar_id then
       let evm, (tyev, s) = Evarutil.new_type_evar env evm Evd.univ_flexible_alg in
-      let evm, ev = Evarutil.new_evar env evm tyev in
+      let evm, ev = Evarutil.new_evar ~typeclass_candidate:false env evm tyev in
       evm, EConstr.Unsafe.to_constr ev
     else
       let id = unquote_nat id in

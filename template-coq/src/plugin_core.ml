@@ -90,7 +90,7 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
     let info = Declare.Info.make ~poly ~kind:(Decls.(IsDefinition Definition)) () in
     let n = Declare.declare_definition ~cinfo ~info ~opaque ~body:(EConstr.of_constr body) evm in
     let env = Global.env () in
-    let evm = Evd.from_env env in
+    let evm = Evd.update_sigma_univs (Environ.universes env) evm in
     success ~st env evm (Names.Constant.canonical (Globnames.destConstRef n))
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
@@ -105,7 +105,9 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
         ~kind:(Decls.IsDefinition Decls.Definition)
         param
     in
-    success ~st (Global.env ()) evm (Names.Constant.canonical n)
+    let env = Global.env () in
+    let evm = Evd.update_sigma_univs (Environ.universes env) evm in
+    success ~st env evm (Names.Constant.canonical n)
 
 (* this generates a lemma leaving a hole *)
 let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =

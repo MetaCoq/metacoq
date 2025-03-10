@@ -531,10 +531,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     Plugin_core.run ~st (Plugin_core.tmEval red trm) env evm
       (fun ~st env evm trm -> k ~st env evm (quote_term env evm trm))
   | TmMkInductive (b, mind) ->
-    let infer_univs = unquote_bool (reduce_all env evm b) in
-    let evm = declare_inductive env evm infer_univs mind in
-    let env = Global.env () in
-    k ~st env evm (Lazy.force unit_tt)
+    if intactic
+    then not_in_tactic "tmMkInductive"
+    else
+      let infer_univs = unquote_bool (reduce_all env evm b) in
+      let evm = declare_inductive env evm infer_univs mind in
+      let env = Global.env () in
+      k ~st env evm (Lazy.force unit_tt)
   | TmUnquote t ->
     begin
        try

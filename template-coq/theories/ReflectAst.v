@@ -9,42 +9,42 @@ From Equations Require Import Equations.
 
 Local Infix "==?" := eqb (at level 20).
 
-Local Ltac finish :=
-  let h := fresh "h" in
-  right ;
-  match goal with
-  | e : ?t <> ?u |- _ =>
-    intro h ; apply e ; now inversion h
-  end.
+(* Local Ltac finish := *)
+(*   let h := fresh "h" in *)
+(*   right ; *)
+(*   match goal with *)
+(*   | e : ?t <> ?u |- _ => *)
+(*     intro h ; apply e ; now inversion h *)
+(*   end. *)
 
 Local Ltac fcase c :=
   let e := fresh "e" in
-  case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
+  case c ; intro e ; [ try (left ; congruence) | right ; congruence ].
 
 Local Ltac term_dec_tac term_dec :=
-  repeat match goal with
-         | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : sort, u' : sort |- _ => fcase (eq_dec u u')
-         | x : Instance.t, y : Instance.t |- _ =>
-           fcase (eq_dec x y)
-         | x : list Level.t, y : Instance.t |- _ =>
-           fcase (eq_dec x y)
-         | x : list aname, y : list aname |- _ =>
-           fcase (eq_dec x y)
-         | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (eq_dec i i')
-         | i : kername, i' : kername |- _ => fcase (eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (eq_dec i i')
-         | n : name, n' : name |- _ => fcase (eq_dec n n')
-         | n : aname, n' : aname |- _ => fcase (eq_dec n n')
-         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
-         | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (eq_dec x y)
-         | x : case_info, y : case_info |- _ =>
-           fcase (eq_dec x y)
-         | x : projection, y : projection |- _ => fcase (eq_dec x y)
-         | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
-         end.
+  match goal with
+  | t : term, u : term |- _ => fcase (term_dec t u)
+  | u : sort, u' : sort |- _ => fcase (eq_dec u u')
+  | x : Instance.t, y : Instance.t |- _ =>
+      fcase (eq_dec x y)
+  | x : list Level.t, y : Instance.t |- _ =>
+      fcase (eq_dec x y)
+  | x : list aname, y : list aname |- _ =>
+      fcase (eq_dec x y)
+  | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
+  | i : ident, i' : ident |- _ => fcase (eq_dec i i')
+  | i : kername, i' : kername |- _ => fcase (eq_dec i i')
+  | i : string, i' : kername |- _ => fcase (eq_dec i i')
+  | n : name, n' : name |- _ => fcase (eq_dec n n')
+  | n : aname, n' : aname |- _ => fcase (eq_dec n n')
+  | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
+  | x : inductive * nat, y : inductive * nat |- _ =>
+      fcase (eq_dec x y)
+  | x : case_info, y : case_info |- _ =>
+      fcase (eq_dec x y)
+  | x : projection, y : projection |- _ => fcase (eq_dec x y)
+  | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
+  end.
 
 #[global] Instance eq_predicate {term} `{EqDec term} : EqDec (predicate term).
 Proof.
@@ -69,29 +69,28 @@ Qed.
 Proof.
   intro x; induction x using term_forall_list_rect ; intro t ;
     destruct t ; try (right ; discriminate).
-  all: term_dec_tac term_dec.
-  - induction X in args |- *.
+  all: try term_dec_tac term_dec.
+  - induction X in args |- *. + destruct args.
+      * left. congruence.
+      * right. congruence.          
     + destruct args.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct args.
-      * right. discriminate.
+      * right. congruence.
       * destruct (IHX args) ; nodec.
         destruct (p t) ; nodec.
-        subst. left. inversion e. reflexivity.
+        left. congruence.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
+    left. congruence.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
+    left. congruence.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
+    left. congruence.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
     destruct (IHx3 t3) ; nodec.
-    subst. left. reflexivity.
+    left. congruence.
   - destruct (IHx t) ; nodec.
     subst. induction X in args |- *.
     + destruct args. all: nodec.
@@ -101,12 +100,15 @@ Proof.
       destruct (p t0). all: nodec.
       subst. inversion e. subst.
       left. reflexivity.
+  - fcase (eq_dec s c).
+  - fcase (eq_dec i ind).
+  - fcase (eq_dec i ind).
+    fcase (eq_dec n idx).
   - destruct (IHx t) ; nodec.
-    destruct p0, type_info; subst; cbn.
+    destruct p0, type_info; cbn.
     term_dec_tac term_dec.
     destruct X as (?&?).
     destruct (s preturn0); cbn in * ; nodec.
-    subst.
     assert ({pparams = pparams0} + {pparams <> pparams0}) as []; nodec.
     { revert pparams0.
       clear -a.
@@ -116,25 +118,25 @@ Proof.
         destruct (p t) ; nodec.
         destruct (IHa l0) ; nodec.
         subst; left; reflexivity. }
-    subst.
-    revert branches. clear -X0.
+    fcase (eq_dec pcontext pcontext0).
+    revert branches. clear -X0 e e0 e1 e2 e3 e4.
     induction X0 ; intro l0.
     + destruct l0.
-      * left. reflexivity.
+      * left. subst. congruence.          
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
       * destruct (IHX0 l0) ; nodec.
         destruct (p (bbody b)) ; nodec.
-        destruct (eq_dec (bcontext x) (bcontext b)) ; nodec.
-        destruct x, b.
-        left.
-        cbn in *. subst. inversion e. reflexivity.
+        destruct (eq_dec (bcontext x0) (bcontext b)) ; nodec.
+        destruct x0, b.
+        left. 
+        cbn in *. congruence.
   - destruct (IHx t) ; nodec.
     left. subst. reflexivity.
   - revert mfix. induction X ; intro m0.
     + destruct m0.
-      * left. reflexivity.
+      * left. congruence.
       * right. discriminate.
     + destruct p as [p1 p2].
       destruct m0.
@@ -144,12 +146,12 @@ Proof.
         destruct (IHX m0) ; nodec.
         destruct x, d ; subst. cbn in *.
         destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
+        inversion e1.
         destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
+        left. congruence.
   - revert mfix. induction X ; intro m0.
     + destruct m0.
-      * left. reflexivity.
+      * left. congruence.
       * right. discriminate.
     + destruct p as [p1 p2].
       destruct m0.
@@ -157,27 +159,29 @@ Proof.
       * destruct (p1 (dtype d)) ; nodec.
         destruct (p2 (dbody d)) ; nodec.
         destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
+        destruct x, d . cbn in *.
         destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
+        inversion e2.
         destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
+        left. congruence.
   - destruct (eq_dec i i0) ; nodec.
-    subst. left. reflexivity.
+    left. congruence.
   - destruct (eq_dec f f0) ; nodec.
-    subst. left. reflexivity.
+    left. congruence.
   - destruct (eq_dec s s0) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1); subst; nodec.
-    destruct (IHx2 t2); subst; nodec.
+    left. congruence.
+  - destruct (IHx1 t1); nodec.
+    destruct (IHx2 t2); nodec.
     destruct (eq_dec u u0); nodec; subst.
     revert arr0.
     induction X.
     + intros []; auto. nodec.
     + intros []; auto. nodec.
-      destruct (IHX l0). noconf e.
-      destruct (p t); nodec. subst. left; auto.
-      nodec.
+      destruct (IHX l0).
+      destruct (p t).
+      * left. congruence.
+      * right. congruence.
+      * nodec.
 Defined.
 
 #[global] Instance reflect_term : ReflectEq term :=

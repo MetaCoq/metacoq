@@ -231,7 +231,7 @@ struct
         eqs (levels, cstrs)
     in
     let levels = Univ.Level.Set.add Univ.Level.set levels in
-    debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.raw_pr (levels, cstrs));
+    debug Pp.(fun () -> str"Universe context: " ++ Univ.ContextSet.pr Univ.Level.raw_pr (levels, cstrs));
     time (Pp.str"Quoting universe context")
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 

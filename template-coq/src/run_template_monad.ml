@@ -312,7 +312,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
   let evm, mind =
     if infer_univs then
       let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
-      debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.pr_universe_context_set UnivNames.pr_level_with_global_universes ctx));
+      debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.ContextSet.pr UnivNames.pr_level_with_global_universes ctx));
       Global.push_context_set ctx;
       Evd.merge_context_set Evd.UnivRigid evm ctx, mind
     else evm, mind

@@ -2205,7 +2205,7 @@ Proof.
     cbv zeta in X9; forward_keep X9.
     { eapply closed_context_conversion; tea. }
     do 2 forward X9 by auto.
-    eapply type_ws_cumul_pb; tea.
+    eapply @type_ws_cumul_pb with (pb := Conv); tea.
     { econstructor; tea. all: econstructor; tea.
       (* The branches contexts also depend on the parameters. *)
       apply All2i_nth_hyp in X9.

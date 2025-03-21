@@ -494,6 +494,7 @@ Proof.
 
   - eapply inversion_Lambda in X4 as (B & dom & codom & cum); auto.
     apply eq_term_empty_eq_term in X5_1.
+    apply eq_term_empty_leq_term in X5_2.
     assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na0 ty) (Γ ,, vass na t)).
     { repeat constructor; pcuic. }
     specialize (X3 onu t0 B).
@@ -514,6 +515,7 @@ Proof.
     apply unlift_TermTyp in dombod as dombod', X0 as X0'.
     apply eq_term_empty_eq_term in X5_1.
     apply eq_term_empty_eq_term in X5_2.
+    apply eq_term_empty_leq_term in X5_3.
     assert(Σ ⊢ Γ ,, vdef na0 t ty = Γ ,, vdef na b b_ty).
     { constructor. eapply ws_cumul_ctx_pb_refl. fvs. constructor => //.
       constructor; fvs. constructor; fvs. }
@@ -638,7 +640,7 @@ Proof.
       rewrite /ptm. constructor. fvs.
       eapply PCUICGeneration.type_it_mkLambda_or_LetIn in pret_ty. subst predctx0; fvs.
       eapply PCUICGeneration.type_it_mkLambda_or_LetIn in pret. subst predctx; fvs.
-      eapply PCUICEquality.eq_term_upto_univ_it_mkLambda_or_LetIn; tea. tc.
+      eapply PCUICEquality.eq_term_upto_univ_it_mkLambda_or_LetIn; tea; tc.
       rewrite /predctx.
       rewrite /case_predicate_context /case_predicate_context_gen.
       eapply eq_context_upto_names_map2_set_binder_name. tea.

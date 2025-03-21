@@ -338,7 +338,7 @@ Section Alpha.
     eapply eq_term_mkApps.
     - eapply eq_term_upto_univ_lift.
       rewrite /ptm /ptm'.
-      eapply eq_term_upto_univ_it_mkLambda_or_LetIn. tc.
+      eapply eq_term_upto_univ_it_mkLambda_or_LetIn; tc.
       eapply eq_context_upto_empty_impl; tea.
       eapply eq_term_upto_univ_empty_impl; tea; tc.
     - eapply All2_app.
@@ -425,7 +425,7 @@ Section Alpha.
     2:{ eapply All2_refl. reflexivity. }
     len. eapply eq_term_upto_univ_lift.
     eapply eq_term_upto_univ_impl; revgoals.
-    eapply eq_term_upto_univ_it_mkLambda_or_LetIn; tea.
+    eapply eq_term_upto_univ_it_mkLambda_or_LetIn; tea. 1,2: tc.
     reflexivity. lia. all:tc.
   Qed.
 

@@ -115,7 +115,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
 | cumul_Lambda : forall na na' ty ty' t t',
     eq_binder_annot na na' ->
     Σ ;;; Γ ⊢ ty ≤s[Conv] ty' ->
-    Σ ;;; Γ ,, vass na ty ⊢ t ≤s[pb] t' ->
+    Σ ;;; Γ ,, vass na ty ⊢ t ≤s[Conv] t' ->
     Σ ;;; Γ ⊢ tLambda na ty t ≤s[pb] tLambda na' ty' t'
 
 | cumul_Prod : forall na na' a a' b b',
@@ -128,7 +128,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     eq_binder_annot na na' ->
     Σ ;;; Γ ⊢ t ≤s[Conv] t' ->
     Σ ;;; Γ ⊢ ty ≤s[Conv] ty' ->
-    Σ ;;; Γ ,, vdef na t ty ⊢ u ≤s[pb] u' ->
+    Σ ;;; Γ ,, vdef na t ty ⊢ u ≤s[Conv] u' ->
     Σ ;;; Γ ⊢ tLetIn na t ty u ≤s[pb] tLetIn na' t' ty' u'
 
 | cumul_Case indn : forall p p' c c' brs brs',
@@ -358,7 +358,7 @@ Lemma cumulSpec0_rect :
     (forall (Γ : context) (pb : conv_pb) (na na' : aname) (ty ty' t t' : term)
             (Hna : eq_binder_annot na na')
             (Hty : cumulSpec0 Σ Γ Conv ty ty') (_ : P cf Σ Γ Conv ty ty' Hty)
-            (Ht : cumulSpec0 Σ (Γ ,, vass na ty) pb t t') ( _ : P cf Σ (Γ ,, vass na ty) pb t t' Ht),
+            (Ht : cumulSpec0 Σ (Γ ,, vass na ty) Conv t t') ( _ : P cf Σ (Γ ,, vass na ty) Conv t t' Ht),
         P cf Σ Γ pb (tLambda na ty t) (tLambda na' ty' t')
           (cumul_Lambda _ _ _ _ _ _ _ _ _ Hna Hty Ht)) ->
 
@@ -373,7 +373,7 @@ Lemma cumulSpec0_rect :
             (Hna : eq_binder_annot na na')
             (Ht : cumulSpec0 Σ Γ Conv t t') (_ : P cf Σ Γ Conv t t' Ht)
             (Hty : cumulSpec0 Σ Γ Conv ty ty') (_ : P cf Σ Γ Conv ty ty' Hty)
-            (Hu : cumulSpec0 Σ (Γ,, vdef na t ty) pb u u') (_ : P cf Σ (Γ,, vdef na t ty) pb u u' Hu),
+            (Hu : cumulSpec0 Σ (Γ,, vdef na t ty) Conv u u') (_ : P cf Σ (Γ,, vdef na t ty) Conv u u' Hu),
         P cf Σ Γ pb (tLetIn na t ty u) (tLetIn na' t' ty' u')
           (cumul_LetIn _ _ _ _ _ _ _ _ _ _ _ Hna Ht Hty Hu)) ->
 

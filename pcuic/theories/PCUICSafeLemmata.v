@@ -119,10 +119,11 @@ Section Lemmata.
   Lemma ws_cumul_pb_zippx :
     forall {wfΣ : wf Σ} le Γ u v ρ,
       closedn_stack #|Γ| ρ ->
-      Σ ;;; (Γ ,,, stack_context ρ) ⊢ u ≤[le] v ->
+      Σ ;;; (Γ ,,, stack_context ρ) ⊢ u = v ->
       Σ ;;; Γ ⊢ zippx u ρ ≤[le] zippx v ρ.
   Proof using Type.
     intros wfΣ le Γ u v ρ cl h.
+    apply ws_cumul_eq_pb.
     induction ρ in u, v, cl, h |- *; auto.
     destruct a.
     all: try solve [

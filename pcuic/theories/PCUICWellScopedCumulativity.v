@@ -145,6 +145,17 @@ Proof.
     * econstructor 2; revgoals. eapply IHredv; cbn; eauto with fvs. all:eauto with fvs.
 Qed.
 
+Lemma ws_cumul_eq_pb {cf:checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {t u} :
+  Σ ;;; Γ ⊢ t = u ->
+  Σ ;;; Γ ⊢ t ≤[pb] u.
+Proof.
+  move/ws_cumul_pb_alt.
+  intros (t' & u' & []).
+  apply ws_cumul_pb_alt.
+  eexists t', u'; split; tas.
+  destruct pb => //; by apply eq_term_leq_term.
+Qed.
+
 Lemma ws_cumul_pb_forget {cf:checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
   ws_cumul_pb pb Σ Γ x y -> Σ ;;; Γ |- x <=[pb] y.
 Proof.

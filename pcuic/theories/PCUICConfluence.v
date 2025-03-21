@@ -834,7 +834,7 @@ Proof.
   ].
   (* tLambda and tProd *)
   idtac.
-  10,15:solve [
+  15:solve [
     dependent destruction e ;
     edestruct (IHh pb) as [? [? ?]] ; [ .. | tea | ] ; eauto;
     clear h;
@@ -857,16 +857,38 @@ Proof.
       eapply eq_term_upto_univ_leq ; eauto
     ]
   ].
+  10:solve [
+    dependent destruction e ;
+    edestruct (IHh Conv) as [? [? ?]] ; [ .. | tea | ] ; tc ; eauto;
+    clear h;
+    lazymatch goal with
+    | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
+      e :  eq_term_upto_univ_napp _ _ _ _ _ ?A ?B
+      |- _ =>
+      let hh := fresh "hh" in
+      eapply red1_eq_context_upto_l in r as hh ; revgoals;
+      [ constructor ; [
+          eapply (eq_context_upto_refl _ _ _ Conv); eauto ; tc
+        | constructor; tea
+        ]
+      | tc ..];
+      destruct hh as [? [? ?]]
+    end;
+    eexists ; split; [ solve [ econstructor ; eauto ]
+    | constructor ; eauto ;
+      eapply eq_term_upto_univ_trans ; eauto ; tc
+    ]
+  ].
   - dependent destruction e. dependent destruction e1.
     eexists. split.
     + constructor.
     + eapply eq_term_upto_univ_substs ; eauto.
-      eapply leq_term_leq_term_napp; eauto.
+      eapply eq_term_upto_univ_leq; tea; eauto with arith.
   - dependent destruction e.
     eexists. split.
     + constructor.
     + eapply eq_term_upto_univ_substs ; try assumption.
-      eapply leq_term_leq_term_napp; eauto.
+      eapply eq_term_upto_univ_leq; tea; eauto with arith.
       auto.
   - dependent destruction e.
     eexists. split.
@@ -990,7 +1012,7 @@ Proof.
     + eapply eq_term_upto_univ_leq ; eauto.
       eapply eq_term_eq_term_napp; auto.
   - dependent destruction e.
-    edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto.
+    edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; tc ; eauto.
     clear h.
     lazymatch goal with
     | r : red1 _ (?Γ,, vdef ?na ?a ?A) ?u ?v,
@@ -1010,7 +1032,6 @@ Proof.
     + eapply letin_red_body ; eauto.
     + constructor ; eauto.
       eapply eq_term_upto_univ_trans ; eauto ; tc.
-      eapply eq_term_upto_univ_leq ; eauto.
   - dependent destruction e.
     destruct e as [? [? [? ?]]].
     eapply OnOne2_prod_inv in X as [_ X].

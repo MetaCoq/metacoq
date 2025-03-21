@@ -238,7 +238,7 @@ Inductive eq_term_upto_univ_napp Σ
 | eq_Lambda na na' ty ty' t t' :
     eq_binder_annot na na' ->
     eq_term_upto_univ_napp Σ cmp_universe cmp_sort Conv 0 ty ty' ->
-    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb 0 t t' ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort Conv 0 t t' ->
     eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (tLambda na ty t) (tLambda na' ty' t')
 
 | eq_Prod na na' a a' b b' :
@@ -251,7 +251,7 @@ Inductive eq_term_upto_univ_napp Σ
     eq_binder_annot na na' ->
     eq_term_upto_univ_napp Σ cmp_universe cmp_sort Conv 0 t t' ->
     eq_term_upto_univ_napp Σ cmp_universe cmp_sort Conv 0 ty ty' ->
-    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb 0 u u' ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort Conv 0 u u' ->
     eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
 | eq_Case ind p p' c c' brs brs' :

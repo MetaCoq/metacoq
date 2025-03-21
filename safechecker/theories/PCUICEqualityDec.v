@@ -115,7 +115,7 @@ Fixpoint eqb_term_upto_univ_napp
   | tLambda na A t, tLambda na' A' t' =>
     eqb_binder_annot na na' &&
     eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance Conv 0 A A' &&
-    eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance pb 0 t t'
+    eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance Conv 0 t t'
 
   | tProd na A B, tProd na' A' B' =>
     eqb_binder_annot na na' &&
@@ -126,7 +126,7 @@ Fixpoint eqb_term_upto_univ_napp
     eqb_binder_annot na na' &&
     eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance Conv 0 B B' &&
     eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance Conv 0 b b' &&
-    eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance pb 0 u u'
+    eqb_term_upto_univ_napp cmpu cmps gen_compare_global_instance Conv 0 u u'
 
   | tCase indp p c brs, tCase indp' p' c' brs' =>
     eqb indp indp' &&

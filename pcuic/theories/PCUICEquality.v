@@ -437,7 +437,7 @@ Inductive eq_term_upto_univ_napp Σ
 | eq_Lambda : forall na na' ty ty' t t',
     eq_binder_annot na na' ->
     Σ ⊢ ty <==[ Conv , 0 ] ty' ->
-    Σ ⊢ t <==[ pb , 0 ] t' ->
+    Σ ⊢ t <==[ Conv , 0 ] t' ->
     Σ ⊢ tLambda na ty t <==[ pb , napp ] tLambda na' ty' t'
 
 | eq_Prod : forall na na' a a' b b',
@@ -450,7 +450,7 @@ Inductive eq_term_upto_univ_napp Σ
     eq_binder_annot na na' ->
     Σ ⊢ t <==[ Conv , 0 ] t' ->
     Σ ⊢ ty <==[ Conv , 0 ] ty' ->
-    Σ ⊢ u <==[ pb , 0 ] u' ->
+    Σ ⊢ u <==[ Conv , 0 ] u' ->
     Σ ⊢ tLetIn na t ty u <==[ pb , napp ] tLetIn na' t' ty' u'
 
 | eq_Case : forall indn p p' c c' brs brs',
@@ -1688,19 +1688,22 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ cmp_universe cmp_sort pb :
-  Proper (eq_context_upto Σ cmp_universe cmp_sort Conv ==> eq_term_upto_univ Σ cmp_universe cmp_sort pb ==> eq_term_upto_univ Σ cmp_universe cmp_sort pb) it_mkLambda_or_LetIn.
+  RelationClasses.subrelation (cmp_universe Conv) (cmp_universe pb) ->
+  RelationClasses.subrelation (cmp_sort Conv) (cmp_sort pb) ->
+  Proper (eq_context_upto Σ cmp_universe cmp_sort Conv ==> eq_term_upto_univ Σ cmp_universe cmp_sort Conv ==> eq_term_upto_univ Σ cmp_universe cmp_sort pb) it_mkLambda_or_LetIn.
 Proof.
-  intros Γ Δ eq u v h.
+  intros ?? Γ Δ eq u v h.
   induction eq in u, v, h |- *.
-  - assumption.
+  - cbn.
+    eapply eq_term_upto_univ_leq; trea.
   - simpl. cbn. apply IHeq => //.
     destruct p; cbn; constructor ; tas; try reflexivity.
 Qed.
 
-Lemma eq_term_upto_univ_it_mkLambda_or_LetIn_r Σ cmp_universe cmp_sort pb Γ :
+Lemma eq_term_upto_univ_it_mkLambda_or_LetIn_r Σ cmp_universe cmp_sort Γ :
   RelationClasses.Reflexive (cmp_universe Conv) ->
   RelationClasses.Reflexive (cmp_sort Conv) ->
-  respectful (eq_term_upto_univ Σ cmp_universe cmp_sort pb) (eq_term_upto_univ Σ cmp_universe cmp_sort pb)
+  respectful (eq_term_upto_univ Σ cmp_universe cmp_sort Conv) (eq_term_upto_univ Σ cmp_universe cmp_sort Conv)
              (it_mkLambda_or_LetIn Γ) (it_mkLambda_or_LetIn Γ).
 Proof.
   intros univ_refl sort_refl u v h.
@@ -1719,10 +1722,10 @@ Proof.
   apply eq_term_upto_univ_it_mkLambda_or_LetIn_r; exact _.
 Qed.
 
-Lemma eq_term_upto_univ_it_mkProd_or_LetIn Σ cmp_universe cmp_sort pb Γ :
+Lemma eq_term_upto_univ_it_mkProd_or_LetIn Σ cmp_universe cmp_sort Γ :
   RelationClasses.Reflexive (cmp_universe Conv) ->
   RelationClasses.Reflexive (cmp_sort Conv) ->
-  respectful (eq_term_upto_univ Σ cmp_universe cmp_sort pb) (eq_term_upto_univ Σ cmp_universe cmp_sort pb)
+  respectful (eq_term_upto_univ Σ cmp_universe cmp_sort Conv) (eq_term_upto_univ Σ cmp_universe cmp_sort Conv)
              (it_mkProd_or_LetIn Γ) (it_mkProd_or_LetIn Γ).
 Proof.
   intros univ_refl sort_refl u v h.

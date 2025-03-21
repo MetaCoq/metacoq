@@ -3412,7 +3412,7 @@ Equations (noeqns) isconv_array_values_aux
                                A2 (Lambda_ty na' t2 :: π2) aux := {
       | Success h with inspect (eqb_binder_annot na na') := {
         | exist true _ :=
-          isconv_red leq
+          isconv_red Conv
                      t1 (Lambda_bd na A1 :: π1)
                      t2 (Lambda_bd na' A2 :: π2) aux ;
         | exist false e :=
@@ -3623,7 +3623,7 @@ Equations (noeqns) isconv_array_values_aux
     rename H into wfΣ; destruct (hΣ _ wfΣ). clear aux.
     specialize_Σ wfΣ.
     apply conv_cum_zipp; auto.
-    constructor. eapply ws_cumul_pb_eq_le_gen.
+    constructor. eapply ws_cumul_eq_pb.
     constructor. all:fvs.
     - destruct h. eapply welltyped_zipc_zipp in h1; auto. fvs.
     - constructor. eapply eqb_universe_instance_spec; eauto.
@@ -3919,7 +3919,7 @@ Qed.
     destruct convdiscr as [cdiscr]. cbn in cdiscr.
     unfold zipp in h1, h2. simpl in h1, h2.
     sq.
-    apply ws_cumul_pb_eq_le_gen.
+    apply ws_cumul_eq_pb.
     change (eq_dec_to_bool ci ci') with (eqb ci ci') in eq5.
     destruct (eqb_specT ci ci'). 2: discriminate.
     subst. eapply ws_cumul_pb_Case. all: tas.
@@ -4464,7 +4464,7 @@ Qed.
     * exact r.
     * auto.
     * specialize_Σ wfΣ. etransitivity; eauto.
-      split. eapply ws_cumul_pb_eq_le_gen. symmetry.
+      split. eapply ws_cumul_eq_pb. symmetry.
       eapply red_ws_cumul_pb.
       eapply into_closed_red.
       + eapply r1.

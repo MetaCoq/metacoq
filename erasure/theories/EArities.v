@@ -858,7 +858,7 @@ Proof.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in ty; eauto.
   epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ wfΣ ty).
   forward H0 by constructor. eapply has_sort_isType; eauto.
-  simpl. now eapply has_sort_isType. eapply PCUICConversion.ws_cumul_pb_eq_le_gen, PCUICSR.wt_cumul_pb_refl; eauto.
+  simpl. now eapply has_sort_isType. eapply ws_cumul_eq_pb, PCUICSR.wt_cumul_pb_refl; eauto.
   destruct H0 as [_ sorts].
   specialize (sorts _ _ decli c) as [sorts sorts'].
   forward sorts' by constructor.

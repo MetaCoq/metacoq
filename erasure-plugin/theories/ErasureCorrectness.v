@@ -198,30 +198,8 @@ Proof.
       cbn [transform guarded_to_unguarded_fix] in *.
       unfold EConstructorsAsBlocks.transform_blocks_program.
       cbn [fst snd].
-      do 3 f_equal.
-      eapply rebuild_wf_env_irr.
-      unfold EInlineProjections.optimize_program. cbn [fst snd].
-      f_equal.
-      eapply rebuild_wf_env_irr.
-      unfold EOptimizePropDiscr.remove_match_on_box_program. cbn [fst snd].
-      f_equal.
-      now eapply rebuild_wf_env_irr.
+      do 2 f_equal.
     }
-    repeat destruct_compose.
-    intros.
-    cbn [transform rebuild_wf_env_transform] in *.
-    cbn [transform constructors_as_blocks_transformation] in *.
-    cbn [transform inline_projections_optimization] in *.
-    cbn [transform remove_match_on_box_trans] in *.
-    cbn [transform remove_params_optimization] in *.
-    cbn [transform guarded_to_unguarded_fix] in *.
-    eapply rebuild_wf_env_irr.
-    unfold EInlineProjections.optimize_program. cbn [fst snd].
-    f_equal.
-    eapply rebuild_wf_env_irr.
-    unfold EOptimizePropDiscr.remove_match_on_box_program. cbn [fst snd].
-    f_equal.
-    now eapply rebuild_wf_env_irr.
   - cbn [optional_self_transform inlining ecf] in *.
     repeat destruct_compose; cbn [transform] in *.
     cbn [transform rebuild_wf_env_transform] in *.

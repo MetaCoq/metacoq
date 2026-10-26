@@ -355,7 +355,32 @@ let add_lower_bound_constraints level components constraints =
        Univ.UnivConstraints.add (component, kind, level) constraints)
     constraints components
 
-let local_fresh_var scope universe =
+(* The components of [universe] that are not bound universe variables, as one
+   universe, when there are at least two of them. *)
+let global_part universe =
+  match
+    List.filter (fun (level, _) -> Option.is_empty (Univ.Level.var_index level))
+      (Univ.Universe.repr universe)
+  with
+  | _ :: _ :: _ as components -> Some (Univ.Universe.unrepr components)
+  | _ -> None
+
+(* A fresh bound level for [universe], lower-bounded by its components.
+
+   When [universe] has two or more global components [G], the level is also
+   bounded below by [global_level max(G)], the global level that represents
+   [max(G)] everywhere in the program.  A constructor argument whose sort is a
+   maximum of some of those global levels is quoted as a fresh global level
+   [h], and the inductive-sort check needs [h <= level].  [h] may be minted only
+   after this declaration's context is finished, when its own declaration is
+   quoted, so the bound cannot name [h].  [program_universes] adds
+   [h <= global_level max(G)] when the source graph proves
+   [D_h <= max(G)], and PCUIC chains the two.  The new bound holds under the
+   valuation [v(level) = v(universe)], [v(global_level max(G)) = v(max(G))],
+   so the extension stays conservative; a use site supplies for [level] the
+   representative of [universe] at its own instance, which [program_universes]
+   puts above [global_level max(G)] by the same rule. *)
+let local_fresh_var ~global_level scope universe =
   let universe = normalize_local_universe scope universe in
   match Univ.Universe.Map.find_opt universe scope.ls_memo with
   | Some level -> level
@@ -366,6 +391,13 @@ let local_fresh_var scope universe =
     let constraints =
       add_lower_bound_constraints level (Univ.Universe.repr universe)
         scope.ls_constraints
+    in
+    let constraints =
+      match global_part universe with
+      | None -> constraints
+      | Some globals ->
+        Univ.UnivConstraints.add
+          (global_level globals, Univ.UnivConstraint.Le, level) constraints
     in
     scope.ls_memo <- Univ.Universe.Map.add universe level scope.ls_memo;
     scope.ls_definitions <- Array.append scope.ls_definitions [| universe |];
@@ -597,7 +629,7 @@ let finish_inductive translation env kn mib =
   | None, Polymorphic auctx -> finish ~template:false auctx mib.mind_variance
   | None, Monomorphic -> None, mib.mind_variance
 
-let template_universe_level translation env universe =
+let rec template_universe_level translation env universe =
   let universe =
     simplify_template_universe
       (normalize_global_universe translation
@@ -621,7 +653,9 @@ let template_universe_level translation env universe =
     if universe_has_var_component universe then begin
       (* Polymorphic scope: components include bound universe variables. *)
       match read_local_scope translation with
-      | Some scope -> local_fresh_var scope universe
+      | Some scope ->
+        local_fresh_var ~global_level:(template_universe_level translation env)
+          scope universe
       | None ->
         CErrors.user_err
           Pp.(str "Quoting algebraic template universe "

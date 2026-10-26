@@ -489,7 +489,14 @@ let test_local_upper_bounds env =
            PConstraints.empty constraints)
     in
     let scope = QT.new_local_scope 3 in
-    let level = QT.local_fresh_var scope (Univ.Universe.unrepr [i, 0; j, 0]) in
+    (* [max(i, j)] has no global component, so no global representative is
+       needed. *)
+    let global_level _ =
+      fail "MetaRocq Test Quoter Local Upper Bounds: global_level called for a universe with no global component."
+    in
+    let level =
+      QT.local_fresh_var ~global_level scope (Univ.Universe.unrepr [i, 0; j, 0])
+    in
     if not (Univ.Level.equal level added) then
       fail "MetaRocq Test Quoter Local Upper Bounds: unexpected added level.";
     QT.local_upper_bounds (QT.create env) env auctx scope

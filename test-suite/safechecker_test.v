@@ -113,6 +113,80 @@ Class template_injtyp (S : Type) (T : Type) := {
   template_injtyp_cstr : forall x, template_injtyp_pred (template_injtyp_inj x) }.
 MetaRocq SafeCheck @template_injtyp.
 
+(* A template inductive whose constructor takes an argument at an algebraic
+   sort over global levels: the argument's sort [max(f, p)] is quoted as a fresh
+   global level, and the inductive's sort [max(f, p, u)], which mentions the
+   template level [u], as a fresh bound level.  The inductive-sort check needs
+   the first below the second, which the kernel derives from
+   [max(f, p) <= max(f, p, u)].  The argument's declaration is quoted after the
+   inductive's own universe context is finished.  This is the shape of
+   LinuxProcessSem.Monad.outcome, whose [Model] argument is a record over three
+   global levels. *)
+Universes template_glob_f template_glob_p.
+Inductive template_glob_F : Type@{template_glob_f} := template_glob_mkF.
+Inductive template_glob_P : Type@{template_glob_p} := template_glob_mkP.
+Record template_glob_model := {
+  template_glob_mf : template_glob_F;
+  template_glob_mp : template_glob_P }.
+#[universes(template)]
+Inductive template_glob_outcome (A : Type) :=
+| template_glob_ok (x : A) (m : template_glob_model)
+| template_glob_unmodeled.
+MetaRocq SafeCheck template_glob_outcome.
+Definition template_glob_use : template_glob_outcome nat :=
+  template_glob_ok nat 0 (Build_template_glob_model template_glob_mkF template_glob_mkP).
+MetaRocq SafeCheck template_glob_use.
+
+(* A negative control on the global path: the same shape, monomorphic, with a
+   declared sort that leaves out [template_glob_p].  Its sort has no bound
+   variable, so it is quoted as a fresh global level.  Rocq refuses it unless
+   universe checking is bypassed, and SafeCheck must still refuse it. *)
+Universe template_glob_u.
+Fail Inductive template_glob_small (A : Type@{template_glob_u})
+  : Type@{max(template_glob_f, template_glob_u)} :=
+| template_glob_small_ok (x : A) (m : template_glob_model).
+#[bypass_check(universes)]
+Inductive template_glob_small (A : Type@{template_glob_u})
+  : Type@{max(template_glob_f, template_glob_u)} :=
+| template_glob_small_ok (x : A) (m : template_glob_model).
+Fail MetaRocq SafeCheck template_glob_small.
+
+(* The same two cases on a bound level, where the new bound is created.  A
+   universe-polymorphic definition of [template_glob_model] at a declared sort
+   [max(f, …, w)] with the bound variable [w]: its sort is quoted as a fresh
+   bound level [a] with [global_level(max(G)) <= a], and the body's sort
+   [max(f, p)] as a fresh global level [h].
+
+   Positive: [G = {f, p, q}].  [h] is a strict sub-maximum of [G], so [h] and
+   [global_level(max(G))] are different levels, and SafeCheck needs
+   [h <= global_level(max(G))] from the upper-bound pass, then the new bound.
+
+   Negative: [G = {f, q}], which leaves out [p].  The upper-bound pass cannot
+   prove [max(f, p) <= max(f, q)], so it adds no [h <= global_level(max(G))],
+   and SafeCheck must refuse, as Rocq does unless universe checking is
+   bypassed. *)
+Universe template_glob_q.
+Inductive template_glob_Q : Type@{template_glob_q} := template_glob_mkQ.
+Polymorphic Definition template_glob_poly_ok@{w}
+  : Type@{max(template_glob_f, template_glob_p, template_glob_q, w)} :=
+  template_glob_model.
+MetaRocq SafeCheck template_glob_poly_ok.
+Fail Polymorphic Definition template_glob_poly_small@{w}
+  : Type@{max(template_glob_f, template_glob_q, w)} := template_glob_model.
+#[bypass_check(universes)]
+Polymorphic Definition template_glob_poly_small@{w}
+  : Type@{max(template_glob_f, template_glob_q, w)} := template_glob_model.
+Fail MetaRocq SafeCheck template_glob_poly_small.
+
+(* The positive case as a template inductive: a constructor with [Model] and
+   [Q] arguments has the inferred sort [max(f, p, q, u)], and [Model] sits at
+   the strict sub-maximum [max(f, p)]. *)
+#[universes(template)]
+Inductive template_glob_outcome3 (A : Type) :=
+| template_glob_ok3 (x : A) (m : template_glob_model) (z : template_glob_Q)
+| template_glob_unmodeled3.
+MetaRocq SafeCheck template_glob_outcome3.
+
 (* SafeCheck uses default checker flags even when quotation runs while Rocq
    universe checking is disabled.  The upper-bound pass must still ask a
    checking graph what follows from the source graph. *)

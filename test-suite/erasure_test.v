@@ -1,6 +1,5 @@
 From MetaRocq.ErasurePlugin Require Import Loader.
 From MetaRocq.Template Require Import Loader.
-Set MetaRocq Timing.
 Local Open Scope string_scope.
 
 MetaRocq Erase -help.
@@ -53,7 +52,6 @@ MetaRocq Erase (map negb [true; false]).
 
 Set Warnings "-abstract-large-number".
 (* Definition bignat := Eval compute in 10000. *)
-Test MetaRocq Timing.
 
 (* MetaRocq Erase bignat. *)
 

@@ -1,0 +1,647 @@
+Usage:
+To erase a Gallina definition named <gid> type:
+MetaRocq Erase <options> <gid>.
+
+To show this help message type:
+MetaRocq Erase -help.
+
+Valid options:
+-typed       :  Run the typed erasure pipeline including a dearging phase. By default we run the pipeline without this phase.
+-unsafe      :  Run also partially verified passes of the pipeline. This includes the cofix to lazy translation.
+-time        :  Time each compilation phase
+-inlining    :  Enable verified inlining phase
+-bypass-qeds :  Bypass the use of Qed and quote opaque proofs. Beware, this can result in large memory
+consumption due to reification of large proof terms.
+By default, we use the (trusted) Template-Rocq quoting optimization that quotes every opaque term as an axiom.
+All these axioms should live in Prop so that erasure is not affected by the absence of their bodies.
+-fast        : Enables an alternative implementation of the parameter stripping phase that uses accumulators
+instead of a view (see Erasure.ERemoveParams).
+
+See https://metarocq.github.io for more detailed information.
+Environment: 
+
+Program: ∎
+Environment: 
+
+Program: ∎
+Environment: 
+Inductive bool(0 parameters,computational, elimination into any sort) := 
+| true 0 arguments
+| false 0 arguments
+Program: true
+Environment: 
+Inductive sig(0 parameters,computational, elimination into any sort) := 
+| exist 2 arguments
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Program: exist[O ∎]
+Environment: 
+Inductive sig(0 parameters,computational, elimination into any sort) := 
+| exist 1 arguments
+Definition Corelib.Init.Specif.proj1_sig := fun e => match e with 
+exist a  => a
+end
+
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_test.test := Corelib.Init.Specif.proj1_sig (exist[O])
+Program: MetaRocq.TestSuite.erasure_test.test
+Environment: 
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+CoInductive Stream(0 parameters,computational, elimination into any sort) := 
+| Cons 2 arguments
+Definition Stdlib.Streams.StreamMemo.memo_make := fun A => fun f => let fix memo_make { struct 1 } := 
+fun n => lazy (Cons[(f n) (memo_make (S[n]))])
+ in memo_make
+Program: Stdlib.Streams.StreamMemo.memo_make
+Environment: 
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition Corelib.Init.Nat.add := fun n => (let fix add { struct 0 } := 
+fun n0 => fun m => match n0 with 
+O => m
+ | S p  => S[(add p m)]
+end
+
+ in add) n
+Program: Corelib.Init.Nat.add (S[(S[(S[O])])]) (S[O])
+Environment: 
+
+Program: (fun X => fun x => x) ∎
+Environment: 
+Inductive eq(0 parameters,propositional, elimination into any sort) := 
+| eq_refl 0 arguments
+Inductive bool(0 parameters,computational, elimination into any sort) := 
+| true 0 arguments
+| false 0 arguments
+Program: fun X => fun x => fun e => true
+Environment: 
+
+Program: ∎
+Environment: 
+Inductive list(0 parameters,computational, elimination into any sort) := 
+| nil 0 arguments
+| cons 2 arguments
+Definition Corelib.Lists.ListDef.map := fun A => fun B => fun f => fun l => (let fix map { struct 0 } := 
+fun l0 => match l0 with 
+nil => nil
+ | cons a  l  => cons[(f a) (map l)]
+end
+
+ in map) l
+Inductive bool(0 parameters,computational, elimination into any sort) := 
+| true 0 arguments
+| false 0 arguments
+Definition Corelib.Init.Datatypes.negb := fun b => match b with 
+true => false
+ | false => true
+end
+
+Program: Corelib.Lists.ListDef.map ∎ ∎ Corelib.Init.Datatypes.negb (cons[true (cons[false nil])])
+Environment: 
+Inductive list(0 parameters,computational, elimination into any sort) := 
+| nil 0 arguments
+| cons 2 arguments
+Inductive positive(0 parameters,computational, elimination into any sort) := 
+| xI 1 arguments
+| xO 1 arguments
+| xH 0 arguments
+Inductive expr(0 parameters,computational, elimination into any sort) := 
+| Nil 0 arguments
+| Var 1 arguments
+Inductive pn_atom(0 parameters,computational, elimination into any sort) := 
+| Equ 2 arguments
+| Nequ 2 arguments
+Inductive space_atom(0 parameters,computational, elimination into any sort) := 
+| Next 2 arguments
+| Lseg 2 arguments
+Inductive assertion(0 parameters,computational, elimination into any sort) := 
+| Assertion 2 arguments
+Inductive entailment(0 parameters,computational, elimination into any sort) := 
+| Entailment 2 arguments
+Inductive pure_atom(0 parameters,computational, elimination into any sort) := 
+| Eqv 2 arguments
+Definition Corelib.BinNums.PosDef.Pos.succ := fun x => (let fix succ { struct 0 } := 
+fun x0 => match x0 with 
+xI p  => xO[(succ p)]
+ | xO p  => xI[p]
+ | xH => xO[xH]
+end
+
+ in succ) x
+Definition Corelib.BinNums.PosDef.Pos.add := fun x => (let fix add { struct 0 } := 
+fun x0 => fun y => match x0 with 
+xI p  => match y with 
+xI q  => xO[(add_carry p q)]
+ | xO q  => xI[(add p q)]
+ | xH => xO[(Corelib.BinNums.PosDef.Pos.succ p)]
+end
+
+ | xO p  => match y with 
+xI q  => xI[(add p q)]
+ | xO q  => xO[(add p q)]
+ | xH => xI[p]
+end
+
+ | xH => match y with 
+xI q  => xO[(Corelib.BinNums.PosDef.Pos.succ q)]
+ | xO q  => xI[q]
+ | xH => xO[xH]
+end
+
+end
+
+ with add_carry { struct 0 } := 
+fun x0 => fun y => match x0 with 
+xI p  => match y with 
+xI q  => xI[(add_carry p q)]
+ | xO q  => xO[(add_carry p q)]
+ | xH => xI[(Corelib.BinNums.PosDef.Pos.succ p)]
+end
+
+ | xO p  => match y with 
+xI q  => xO[(add_carry p q)]
+ | xO q  => xI[(add p q)]
+ | xH => xO[(Corelib.BinNums.PosDef.Pos.succ p)]
+end
+
+ | xH => match y with 
+xI q  => xI[(Corelib.BinNums.PosDef.Pos.succ q)]
+ | xO q  => xO[(Corelib.BinNums.PosDef.Pos.succ q)]
+ | xH => xI[xH]
+end
+
+end
+
+ in add) x
+Definition MetaRocq.TestSuite.vs.add_id := Corelib.BinNums.PosDef.Pos.add
+Definition MetaRocq.TestSuite.vs.list_prio := fun A => fun weight => fun l => (let fix list_prio { struct 2 } := 
+fun A0 => fun weight0 => fun l0 => fun p => match l0 with 
+nil => p
+ | cons a  l'  => list_prio ∎ weight0 l' (MetaRocq.TestSuite.vs.add_id weight0 p)
+end
+
+ in list_prio) ∎ weight l
+Inductive Z(0 parameters,computational, elimination into any sort) := 
+| Z0 0 arguments
+| Zpos 1 arguments
+| Zneg 1 arguments
+Definition MetaRocq.TestSuite.vs.Z2id := fun z => match z with 
+Z0 => xH
+ | Zpos p  => Corelib.BinNums.PosDef.Pos.add p xH
+ | Zneg p  => xH
+end
+
+Definition MetaRocq.TestSuite.vs.var2 := MetaRocq.TestSuite.vs.Z2id (Zpos[(xO[xH])])
+Definition MetaRocq.TestSuite.vs.var1 := MetaRocq.TestSuite.vs.Z2id (Zpos[xH])
+Definition MetaRocq.TestSuite.vs.var0 := MetaRocq.TestSuite.vs.Z2id Z0
+Definition MetaRocq.TestSuite.vs.prio := fun gamma => fun delta => MetaRocq.TestSuite.vs.list_prio ∎ MetaRocq.TestSuite.vs.var2 gamma (MetaRocq.TestSuite.vs.list_prio ∎ MetaRocq.TestSuite.vs.var1 delta MetaRocq.TestSuite.vs.var0)
+Inductive clause(0 parameters,computational, elimination into any sort) := 
+| PureClause 4 arguments
+| PosSpaceClause 3 arguments
+| NegSpaceClause 3 arguments
+Definition Stdlib.Lists.List.fold_left := fun A => fun B => fun f => fun l => (let fix fold_left { struct 0 } := 
+fun l0 => fun a0 => match l0 with 
+nil => a0
+ | cons b  l  => fold_left l (f a0 b)
+end
+
+ in fold_left) l
+Inductive color(0 parameters,computational, elimination into any sort) := 
+| Red 0 arguments
+| Black 0 arguments
+Inductive tree(0 parameters,computational, elimination into any sort) := 
+| Leaf 0 arguments
+| Node 4 arguments
+Inductive comparison(0 parameters,computational, elimination into any sort) := 
+| Eq 0 arguments
+| Lt 0 arguments
+| Gt 0 arguments
+Definition Corelib.BinNums.PosDef.Pos.compare_cont := fun r => fun x => fun y => (let fix compare_cont { struct 2 } := 
+fun r0 => fun x0 => fun y0 => match x0 with 
+xI p  => match y0 with 
+xI q  => compare_cont r0 p q
+ | xO q  => compare_cont Gt p q
+ | xH => Gt
+end
+
+ | xO p  => match y0 with 
+xI q  => compare_cont Lt p q
+ | xO q  => compare_cont r0 p q
+ | xH => Gt
+end
+
+ | xH => match y0 with 
+xI q  => Lt
+ | xO q  => Lt
+ | xH => r0
+end
+
+end
+
+ in compare_cont) r x y
+Definition Corelib.BinNums.PosDef.Pos.compare := Corelib.BinNums.PosDef.Pos.compare_cont Eq
+Definition MetaRocq.TestSuite.vs.prio1000 := MetaRocq.TestSuite.vs.Z2id (Zpos[(xO[(xO[(xO[(xI[(xO[(xI[(xI[(xI[(xI[xH])])])])])])])])])])
+Definition MetaRocq.TestSuite.vs.prio1001 := MetaRocq.TestSuite.vs.Z2id (Zpos[(xI[(xO[(xO[(xI[(xO[(xI[(xI[(xI[(xI[xH])])])])])])])])])])
+Definition MetaRocq.TestSuite.vs.clause_prio := fun cl => match cl with 
+PureClause gamma  delta  prio  prio_ok  => prio
+ | PosSpaceClause gamma  delta  sigma  => MetaRocq.TestSuite.vs.prio1000
+ | NegSpaceClause gamma  sigma  delta  => MetaRocq.TestSuite.vs.prio1001
+end
+
+Definition MetaRocq.TestSuite.vs.compare_list := fun A => fun f => fun xl => (let fix compare_list { struct 2 } := 
+fun A0 => fun f0 => fun xl0 => fun yl => match xl0 with 
+nil => match yl with 
+nil => Eq
+ | cons a  l  => Lt
+end
+
+ | cons x  xl'  => match yl with 
+nil => Gt
+ | cons y  yl'  => match f0 x y with 
+Eq => compare_list ∎ f0 xl' yl'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+end
+
+end
+
+ in compare_list) ∎ f xl
+Definition MetaRocq.TestSuite.vs.expr_cmp := fun e => fun e' => match e with 
+Nil => match e' with 
+Nil => Eq
+ | Var v  => Lt
+end
+
+ | Var v  => match e' with 
+Nil => Gt
+ | Var v'  => Corelib.BinNums.PosDef.Pos.compare v v'
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.pure_atom_cmp := fun a => fun a' => match a with 
+Eqv e1  e2  => match a' with 
+Eqv e1'  e2'  => match MetaRocq.TestSuite.vs.expr_cmp e1 e1' with 
+Eq => MetaRocq.TestSuite.vs.expr_cmp e2 e2'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.compare_space_atom := fun a => fun b => match a with 
+Next i  j  => match b with 
+Next i'  j'  => match MetaRocq.TestSuite.vs.expr_cmp i i' with 
+Eq => MetaRocq.TestSuite.vs.expr_cmp j j'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+ | Lseg i'  j'  => match MetaRocq.TestSuite.vs.expr_cmp i i' with 
+Eq => Lt
+ | Lt => Lt
+ | Gt => Gt
+end
+
+end
+
+ | Lseg i  j  => match b with 
+Next i'  j'  => match MetaRocq.TestSuite.vs.expr_cmp i i' with 
+Eq => Gt
+ | Lt => Lt
+ | Gt => Gt
+end
+
+ | Lseg i'  j'  => match MetaRocq.TestSuite.vs.expr_cmp i i' with 
+Eq => MetaRocq.TestSuite.vs.expr_cmp j j'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.compare_clause := fun cl1 => fun cl2 => match cl1 with 
+PureClause neg  pos  priority  prio_ok  => match cl2 with 
+PureClause neg'  pos'  priority0  prio_ok0  => match MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.pure_atom_cmp neg neg' with 
+Eq => MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.pure_atom_cmp pos pos'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+ | PosSpaceClause gamma  delta  sigma  => Lt
+ | NegSpaceClause gamma  sigma  delta  => Lt
+end
+
+ | PosSpaceClause gamma  delta  sigma  => match cl2 with 
+PureClause gamma0  delta0  priority  prio_ok  => Gt
+ | PosSpaceClause gamma'  delta'  sigma'  => match MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.pure_atom_cmp gamma gamma' with 
+Eq => match MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.pure_atom_cmp delta delta' with 
+Eq => MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.compare_space_atom sigma sigma'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+ | Lt => Lt
+ | Gt => Gt
+end
+
+ | NegSpaceClause gamma0  sigma0  delta0  => Lt
+end
+
+ | NegSpaceClause gamma  sigma  delta  => match cl2 with 
+PureClause gamma0  delta0  priority  prio_ok  => Gt
+ | PosSpaceClause gamma0  delta0  sigma0  => Gt
+ | NegSpaceClause gamma'  sigma'  delta'  => match MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.pure_atom_cmp gamma gamma' with 
+Eq => match MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.pure_atom_cmp delta delta' with 
+Eq => MetaRocq.TestSuite.vs.compare_list ∎ MetaRocq.TestSuite.vs.compare_space_atom sigma sigma'
+ | Lt => Lt
+ | Gt => Gt
+end
+
+ | Lt => Lt
+ | Gt => Gt
+end
+
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.compare_clause' := fun cl1 => fun cl2 => match Corelib.BinNums.PosDef.Pos.compare (MetaRocq.TestSuite.vs.clause_prio cl1) (MetaRocq.TestSuite.vs.clause_prio cl2) with 
+Eq => MetaRocq.TestSuite.vs.compare_clause cl1 cl2
+ | Lt => Lt
+ | Gt => Gt
+end
+
+Variant t_(0 parameters,computational, elimination into any sort) := 
+| Mkt 2 arguments
+Definition MetaRocq.TestSuite.vs.M.Raw.makeBlack := fun t => match t with 
+Leaf => Leaf
+ | Node t0  a  x  b  => Node[Black a x b]
+end
+
+Definition MetaRocq.TestSuite.vs.M.Raw.lbal := fun l => fun k => fun r => match l with 
+Leaf => Node[Black l k r]
+ | Node t  a  x  c  => match t with 
+Red => match a with 
+Leaf => match c with 
+Leaf => Node[Black l k r]
+ | Node t0  b  y  c  => match t0 with 
+Red => Node[Red (Node[Black a x b]) y (Node[Black c k r])]
+ | Black => Node[Black l k r]
+end
+
+end
+
+ | Node t0  a  x  b  => match t0 with 
+Red => Node[Red (Node[Black a x b]) x (Node[Black c k r])]
+ | Black => match c with 
+Leaf => Node[Black l k r]
+ | Node t1  b  y  c  => match t1 with 
+Red => Node[Red (Node[Black a x b]) y (Node[Black c k r])]
+ | Black => Node[Black l k r]
+end
+
+end
+
+end
+
+end
+
+ | Black => Node[Black l k r]
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.M.Raw.rbal := fun l => fun k => fun r => match r with 
+Leaf => Node[Black l k r]
+ | Node t  b  y  d  => match t with 
+Red => match b with 
+Leaf => match d with 
+Leaf => Node[Black l k r]
+ | Node t0  c  z  d  => match t0 with 
+Red => Node[Red (Node[Black l k b]) y (Node[Black c z d])]
+ | Black => Node[Black l k r]
+end
+
+end
+
+ | Node t0  b  y  c  => match t0 with 
+Red => Node[Red (Node[Black l k b]) y (Node[Black c y d])]
+ | Black => match d with 
+Leaf => Node[Black l k r]
+ | Node t1  c  z  d  => match t1 with 
+Red => Node[Red (Node[Black l k b]) y (Node[Black c z d])]
+ | Black => Node[Black l k r]
+end
+
+end
+
+end
+
+end
+
+ | Black => Node[Black l k r]
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.M.Raw.ins := fun x => fun s => (let fix ins { struct 1 } := 
+fun x0 => fun s0 => match s0 with 
+Leaf => Node[Red Leaf x0 Leaf]
+ | Node c  l  y  r  => match MetaRocq.TestSuite.vs.compare_clause' x0 y with 
+Eq => s0
+ | Lt => match c with 
+Red => Node[Red (ins x0 l) y r]
+ | Black => MetaRocq.TestSuite.vs.M.Raw.lbal (ins x0 l) y r
+end
+
+ | Gt => match c with 
+Red => Node[Red l y (ins x0 r)]
+ | Black => MetaRocq.TestSuite.vs.M.Raw.rbal l y (ins x0 r)
+end
+
+end
+
+end
+
+ in ins) x s
+Definition MetaRocq.TestSuite.vs.M.Raw.add := fun x => fun s => MetaRocq.TestSuite.vs.M.Raw.makeBlack (MetaRocq.TestSuite.vs.M.Raw.ins x s)
+Definition MetaRocq.TestSuite.vs.M.this := fun t => match t with 
+Mkt this  is_ok  => this
+end
+
+Definition MetaRocq.TestSuite.vs.M.add := fun x => fun s => Mkt[(MetaRocq.TestSuite.vs.M.Raw.add x (MetaRocq.TestSuite.vs.M.this s)) ∎]
+Definition MetaRocq.TestSuite.vs.M.Raw.empty := Leaf
+Definition MetaRocq.TestSuite.vs.M.empty := Mkt[MetaRocq.TestSuite.vs.M.Raw.empty ∎]
+Definition MetaRocq.TestSuite.vs.clause_list2set := fun l => Stdlib.Lists.List.fold_left ∎ ∎ (fun s0 => fun c => MetaRocq.TestSuite.vs.M.add c s0) l MetaRocq.TestSuite.vs.M.empty
+Inductive bool(0 parameters,computational, elimination into any sort) := 
+| true 0 arguments
+| false 0 arguments
+Definition Stdlib.Lists.List.filter := fun A => fun f => fun l => (let fix filter { struct 0 } := 
+fun l0 => match l0 with 
+nil => nil
+ | cons x  l  => match f x with 
+true => cons[x (filter l)]
+ | false => filter l
+end
+
+end
+
+ in filter) l
+Definition MetaRocq.TestSuite.vs.VeriStar.pureb := fun c => match c with 
+PureClause gamma  delta  priority  prio_ok  => true
+ | PosSpaceClause gamma  delta  sigma  => false
+ | NegSpaceClause gamma  sigma  delta  => false
+end
+
+Definition MetaRocq.TestSuite.vs.VeriStar.pure_clauses := Stdlib.Lists.List.filter ∎ MetaRocq.TestSuite.vs.VeriStar.pureb
+Definition Corelib.Lists.ListDef.map := fun A => fun B => fun f => fun l => (let fix map { struct 0 } := 
+fun l0 => match l0 with 
+nil => nil
+ | cons a  l  => cons[(f a) (map l)]
+end
+
+ in map) l
+Definition MetaRocq.TestSuite.vs.mkPureClause := fun gamma => fun delta => PureClause[gamma delta (MetaRocq.TestSuite.vs.prio gamma delta) ∎]
+Definition MetaRocq.TestSuite.vs.insert_uniq := fun A => fun cmp => fun a => fun l => (let fix insert_uniq { struct 3 } := 
+fun A0 => fun cmp0 => fun a0 => fun l0 => match l0 with 
+nil => cons[a0 nil]
+ | cons h  t  => match cmp0 a0 h with 
+Eq => l0
+ | Lt => cons[h (insert_uniq ∎ cmp0 a0 t)]
+ | Gt => cons[a0 l0]
+end
+
+end
+
+ in insert_uniq) ∎ cmp a l
+Definition MetaRocq.TestSuite.vs.rsort_uniq := fun A => fun cmp => fun l => (let fix rsort_uniq { struct 2 } := 
+fun A0 => fun cmp0 => fun l0 => match l0 with 
+nil => nil
+ | cons h  t  => MetaRocq.TestSuite.vs.insert_uniq ∎ cmp0 h (rsort_uniq ∎ cmp0 t)
+end
+
+ in rsort_uniq) ∎ cmp l
+Definition MetaRocq.TestSuite.vs.order_eqv_pure_atom := fun a => match a with 
+Eqv i  j  => match MetaRocq.TestSuite.vs.expr_cmp i j with 
+Eq => Eqv[i j]
+ | Lt => Eqv[j i]
+ | Gt => Eqv[i j]
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.normalize_atoms := fun pa => MetaRocq.TestSuite.vs.rsort_uniq ∎ MetaRocq.TestSuite.vs.pure_atom_cmp (Corelib.Lists.ListDef.map ∎ ∎ MetaRocq.TestSuite.vs.order_eqv_pure_atom pa)
+Definition MetaRocq.TestSuite.vs.nonreflex_atom := fun a => match a with 
+Eqv i  j  => match MetaRocq.TestSuite.vs.expr_cmp i j with 
+Eq => false
+ | Lt => true
+ | Gt => true
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.order_eqv_clause := fun c => match c with 
+PureClause pa  pa'  priority  prio_ok  => MetaRocq.TestSuite.vs.mkPureClause (MetaRocq.TestSuite.vs.normalize_atoms (Stdlib.Lists.List.filter ∎ MetaRocq.TestSuite.vs.nonreflex_atom pa)) (MetaRocq.TestSuite.vs.normalize_atoms pa')
+ | PosSpaceClause pa  pa'  sa'  => PosSpaceClause[(MetaRocq.TestSuite.vs.normalize_atoms (Stdlib.Lists.List.filter ∎ MetaRocq.TestSuite.vs.nonreflex_atom pa)) (MetaRocq.TestSuite.vs.normalize_atoms pa') sa']
+ | NegSpaceClause pa  sa  pa'  => NegSpaceClause[(MetaRocq.TestSuite.vs.normalize_atoms (Stdlib.Lists.List.filter ∎ MetaRocq.TestSuite.vs.nonreflex_atom pa)) sa (MetaRocq.TestSuite.vs.normalize_atoms pa')]
+end
+
+Inductive prod(0 parameters,computational, elimination into any sort) := 
+| pair 2 arguments
+Definition MetaRocq.TestSuite.vs.mk_pureR := fun al => (let fix mk_pureR { struct 0 } := 
+fun al0 => match al0 with 
+nil => pair[nil nil]
+ | cons p  l'  => match p with 
+Equ x  y  => match mk_pureR l' with 
+pair p  n  => pair[(cons[(MetaRocq.TestSuite.vs.order_eqv_pure_atom (Eqv[x y])) p]) n]
+end
+
+ | Nequ x  y  => match mk_pureR l' with 
+pair p  n  => pair[p (cons[(MetaRocq.TestSuite.vs.order_eqv_pure_atom (Eqv[x y])) n])]
+end
+
+end
+
+end
+
+ in mk_pureR) al
+Definition Corelib.Init.Datatypes.app := fun A => fun l => (let fix app { struct 0 } := 
+fun l0 => fun m => match l0 with 
+nil => m
+ | cons a  l1  => cons[a (app l1 m)]
+end
+
+ in app) l
+Definition MetaRocq.TestSuite.vs.mk_pureL := fun a => match a with 
+Equ x  y  => MetaRocq.TestSuite.vs.mkPureClause nil (cons[(MetaRocq.TestSuite.vs.order_eqv_pure_atom (Eqv[x y])) nil])
+ | Nequ x  y  => MetaRocq.TestSuite.vs.mkPureClause (cons[(MetaRocq.TestSuite.vs.order_eqv_pure_atom (Eqv[x y])) nil]) nil
+end
+
+Definition MetaRocq.TestSuite.vs.cnf := fun en => match en with 
+Entailment a  a0  => match a with 
+Assertion pureL  spaceL  => match a0 with 
+Assertion pureR  spaceR  => match MetaRocq.TestSuite.vs.mk_pureR pureR with 
+pair p  n  => Corelib.Init.Datatypes.app ∎ (Corelib.Lists.ListDef.map ∎ ∎ MetaRocq.TestSuite.vs.mk_pureL pureL) (Corelib.Init.Datatypes.app ∎ (cons[(PosSpaceClause[nil nil spaceL]) nil]) (match spaceL with 
+nil => match spaceR with 
+nil => cons[(MetaRocq.TestSuite.vs.mkPureClause p n) nil]
+ | cons s  l  => cons[(NegSpaceClause[p spaceR n]) nil]
+end
+
+ | cons s  l  => cons[(NegSpaceClause[p spaceR n]) nil]
+end
+))
+end
+
+end
+
+end
+
+end
+
+Inductive sig(0 parameters,computational, elimination into any sort) := 
+| exist 2 arguments
+Axiom MetaRocq.TestSuite.vs.VeriStar.the_loop_terminate
+Definition MetaRocq.TestSuite.vs.VeriStar.the_loop := fun n => fun sigma => fun nc => fun s => fun cl => match MetaRocq.TestSuite.vs.VeriStar.the_loop_terminate n sigma nc s cl with 
+exist a  b  => a
+end
+
+Definition MetaRocq.TestSuite.vs.DebuggingHooks.print_new_pures_set := fun s => s
+Definition MetaRocq.TestSuite.vs.empty_clause := MetaRocq.TestSuite.vs.mkPureClause nil nil
+Definition MetaRocq.TestSuite.vs.VeriStar.check_entailment := fun ent => let s := MetaRocq.TestSuite.vs.clause_list2set (MetaRocq.TestSuite.vs.VeriStar.pure_clauses (Corelib.Lists.ListDef.map ∎ ∎ MetaRocq.TestSuite.vs.order_eqv_clause (MetaRocq.TestSuite.vs.cnf ent))) in 
+match ent with 
+Entailment a  a0  => match a with 
+Assertion pi  sigma  => match a0 with 
+Assertion pi'  sigma'  => match MetaRocq.TestSuite.vs.mk_pureR pi with 
+pair piplus  piminus  => match MetaRocq.TestSuite.vs.mk_pureR pi' with 
+pair pi'plus  pi'minus  => MetaRocq.TestSuite.vs.VeriStar.the_loop (xO[(xO[(xO[(xO[(xO[(xO[(xO[(xO[(xO[(xI[(xO[(xI[(xO[(xO[(xI[(xI[(xO[(xI[(xO[(xI[(xI[(xO[(xO[(xI[(xI[(xI[(xO[(xI[(xI[xH])])])])])])])])])])])])])])])])])])])])])])])])])])])])]) sigma (NegSpaceClause[pi'plus sigma' pi'minus]) (MetaRocq.TestSuite.vs.DebuggingHooks.print_new_pures_set s) MetaRocq.TestSuite.vs.empty_clause
+end
+
+end
+
+end
+
+end
+
+end
+
+Definition MetaRocq.TestSuite.vs.c := Var[(xI[xH])]
+Definition MetaRocq.TestSuite.vs.e := Var[(xI[(xO[xH])])]
+Definition MetaRocq.TestSuite.vs.a := Var[xH]
+Definition MetaRocq.TestSuite.vs.b := Var[(xO[xH])]
+Definition MetaRocq.TestSuite.vs.d := Var[(xO[(xO[xH])])]
+Definition MetaRocq.TestSuite.vs.example_ent := Entailment[(Assertion[(cons[(Nequ[MetaRocq.TestSuite.vs.c MetaRocq.TestSuite.vs.e]) nil]) (cons[(Lseg[MetaRocq.TestSuite.vs.a MetaRocq.TestSuite.vs.b]) (cons[(Lseg[MetaRocq.TestSuite.vs.a MetaRocq.TestSuite.vs.c]) (cons[(Next[MetaRocq.TestSuite.vs.c MetaRocq.TestSuite.vs.d]) (cons[(Lseg[MetaRocq.TestSuite.vs.d MetaRocq.TestSuite.vs.e]) nil])])])])]) (Assertion[nil (cons[(Lseg[MetaRocq.TestSuite.vs.b MetaRocq.TestSuite.vs.c]) (cons[(Lseg[MetaRocq.TestSuite.vs.c MetaRocq.TestSuite.vs.e]) nil])])])]
+Definition MetaRocq.TestSuite.vs.main := MetaRocq.TestSuite.vs.VeriStar.check_entailment MetaRocq.TestSuite.vs.example_ent
+Program: MetaRocq.TestSuite.vs.main

@@ -1,0 +1,12 @@
+check_guarded: true
+check_positive: true
+check_universes: true
+definitional uip: false
+"toto has been translated as totoᵗ"
+totoᵗ : unit -> (forall A : Type, A -> A) -> Type -> Type
+     : unit -> (forall A : Type, A -> A) -> Type -> Type
+"FALSE has been translated as FALSEᵗ"
+"toto"
+"a has been translated as aᵗ"
+"T has been translated as Tᵗ"
+"tm has been translated as tmᵗ"

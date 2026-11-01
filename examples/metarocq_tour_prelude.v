@@ -41,6 +41,7 @@ Next Obligation. Admitted.
 
 Global Existing Instance normalization. (* to convert from Normalization to NormalizationIn *)
 Global Instance assume_normalization : Normalization.
+Proof.
 Admitted.
 
 Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=

@@ -183,7 +183,7 @@ Next Obligation.
   - cbn; intros A B x y. exact y.2.
 Defined.
 
-Time MetaRocq Run (TC <- ImplementExisting TC' "sigT_ind" ;;
+MetaRocq Run (TC <- ImplementExisting TC' "sigT_ind" ;;
                           tmDefinition "TC''" TC).
 Next Obligation.
   unshelve econstructor.

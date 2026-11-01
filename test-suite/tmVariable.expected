@@ -1,0 +1,7 @@
+bla : nat
+     : nat
+"Here we can get the term"
+test : nat -> nat
+     : nat -> nat
+test2 : nat
+     : nat

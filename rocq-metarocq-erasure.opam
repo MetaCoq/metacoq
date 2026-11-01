@@ -25,7 +25,7 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "dune" {>= "3.21"}
+  "dune" {>= "3.22"}
   "rocq-metarocq-safechecker" {= version}
   "rocq-metarocq-template-pcuic" {= version}
 ]

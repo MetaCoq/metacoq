@@ -25,7 +25,7 @@ build: [
   ["dune" "build" "-p" name "-j" jobs "@install" "@runtest" {with-test}]
 ]
 depends: [
-  "dune" {>= "3.21"}
+  "dune" {>= "3.22"}
   "rocq-metarocq-safechecker" {= version}
   "rocq-metarocq-erasure" {= version}
   "rocq-metarocq-translations" {= version}

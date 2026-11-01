@@ -5,6 +5,7 @@ Definition bAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 Definition bNamed s := {| binder_name := nNamed s; binder_relevance := Relevant |}.
 
 Goal True.
+Proof.
   evar (n : nat).
   match goal with
     H := ?t |- _ => quote_term t (fun x => pose (qn:=x))
@@ -25,6 +26,7 @@ Local Open Scope string_scope.
 
 Goal list nat.
   (* Back and forth *)
+Proof.
   let x := open_constr:(nil) in quote_term x (fun qt =>
     ltac:(denote_term qt (fun unqt => set (e := eq_refl : unqt = x :> list bool)))).
     (* Creation of evars by denotation of 'hole' *)
@@ -33,6 +35,7 @@ Goal list nat.
 Defined.
 
 Goal True.
+Proof.
   let x := eval cbv in (tLambda bAnon listnat hole) in
   (* We check that created evars are in the right context *)
   denote_term x (fun k => set (ev := k); revert ev).

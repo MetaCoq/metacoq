@@ -1,0 +1,2 @@
+(tConst (MPfile ["Datatypes"; "Init"; "Corelib"], "negb") [])
+(fun b : bool => if b then false else true)

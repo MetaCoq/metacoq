@@ -1,0 +1,20 @@
+1
+(1 + 1 : nat)
+2
+two
+assume
+blah
+*** [ blah : bool ]
+blah0
+*** [ blah0 : bool ]
+(tInd
+   {|
+     inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+     inductive_ind := 0
+   |} [])
+1
+Inductive thing : Set :=  thing1 : bool -> thing | thing2 : string -> thing.
+
+Arguments thing1 _%_bool_scope
+MetaRocq.TestSuite.extractable
+(tConst (MPfile ["Nat"; "Init"; "Corelib"], "add") [])

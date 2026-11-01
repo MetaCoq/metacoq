@@ -65,6 +65,7 @@ MetaRocq Quote Recursively Definition foo :=
 (* ((fun x => x + 1) 4). *)
 
 Definition default_normal : @normalizing_flags default_checker_flags.
+Proof.
 now econstructor.
 Defined.
 Unset MetaRocq Strict Unquote Universe Mode.
@@ -105,5 +106,5 @@ Program Definition eval_compute_cheat (cf := default_checker_flags)
     [] p'.2 (todo "welltyped") in
     PCUICToTemplate.trans tm.
 
-Time Definition bar'' := Eval lazy in eval_compute default_normal foo Monomorphic_ctx.
+Definition bar'' := Eval lazy in eval_compute default_normal foo Monomorphic_ctx.
 MetaRocq Unquote Definition bar''' := (match bar'' with inl x => x | inr  _ => todo "" end).

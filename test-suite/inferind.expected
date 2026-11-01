@@ -1,0 +1,57 @@
+{|
+  mind_entry_record := None;
+  mind_entry_finite := Finite;
+  mind_entry_params :=
+    [{|
+       decl_name :=
+         {| binder_name := nNamed "A"; binder_relevance := Relevant |};
+       decl_body := None;
+       decl_type :=
+         tSort
+           (sType
+              {|
+                Universe.t_set :=
+                  {|
+                    LevelExprSet.this :=
+                      [(Level.level "Corelib.Init.Datatypes.190", 0)];
+                    LevelExprSet.is_ok :=
+                      LevelExprSet.Raw.singleton_ok
+                        (Level.level "Corelib.Init.Datatypes.190", 0)
+                  |};
+                Universe.t_ne :=
+                  Universes.Universe.NES.singleton_obligation_1
+                    (Level.level "Corelib.Init.Datatypes.190", 0)
+              |})
+     |}];
+  mind_entry_inds :=
+    [{|
+       mind_entry_typename := "list";
+       mind_entry_arity :=
+         tSort
+           (sType
+              {|
+                Universe.t_set :=
+                  {|
+                    LevelExprSet.this :=
+                      [(Level.level "__metarocq_fresh_level__", 0)];
+                    LevelExprSet.is_ok :=
+                      LevelExprSet.Raw.singleton_ok
+                        (Level.level "__metarocq_fresh_level__", 0)
+                  |};
+                Universe.t_ne :=
+                  Universes.Universe.NES.singleton_obligation_1
+                    (Level.level "__metarocq_fresh_level__", 0)
+              |});
+       mind_entry_consnames := ["nil"; "cons"];
+       mind_entry_lc :=
+         [tApp (tRel 1) [tRel 0];
+          tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+            (tRel 0)
+            (tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+               (tApp (tRel 2) [tRel 1]) (tApp (tRel 3) [tRel 2]))]
+     |}];
+  mind_entry_universes := Monomorphic_entry;
+  mind_entry_template := false;
+  mind_entry_variance := None;
+  mind_entry_private := None
+|}

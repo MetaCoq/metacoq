@@ -6,5 +6,6 @@ Parameter a : nat.
 Axiom aa : a = a + a.
 
 Goal a + a + a + a+ a+ a + a = a.
-  now rewrite -!aa.
+Proof.
+  now rw -!aa.
 Qed.

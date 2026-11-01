@@ -39,8 +39,8 @@ Definition id := fun (X : Set) (x : X) => x.
 Definition idnat := (id nat).
 
 MetaRocq Quote Recursively Definition idnatc := idnat.
-Time Definition test_idnat := Eval lazy in test idnatc.
-Time Definition testty_idnat := Eval lazy in testty idnatc.
+Definition test_idnat := Eval lazy in test idnatc.
+Definition testty_idnat := Eval lazy in testty idnatc.
 
 (** Check that optimization of singleton pattern-matchings work *)
 Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
@@ -59,6 +59,7 @@ MetaRocq Run (tmEval hnf singlelim >>= erase).
 MetaRocq Run (erase (plus 0 1)).
 
 (** vector addition **)
+#[warning="-warn-library-file-stdlib-vector"]
 Require Stdlib.Vectors.Vector.
 
 Definition vplus {n:nat} :
@@ -69,9 +70,8 @@ Definition v23 : Vector.t nat 2 :=
   (Vector.cons nat 2 1 (Vector.cons nat 3 0 (Vector.nil nat))).
 Definition vplus0123 := (vplus v01 v23).
 
-Set MetaRocq Timing.
 
-Time MetaRocq Run (tmEval hnf vplus0123 >>= erase).
+MetaRocq Run (tmEval hnf vplus0123 >>= erase).
 
 (** Cofix *)
 From Stdlib Require Import StreamMemo.
@@ -98,12 +98,12 @@ Definition ack35 := (ack 3 5).
 MetaRocq Quote Recursively Definition cbv_ack35 :=
   ltac:(let t:=(eval cbv delta [ack35] in ack35) in exact t).
 
-Time Definition testack35 := Eval lazy in test cbv_ack35.
+Definition testack35 := Eval lazy in test cbv_ack35.
 
 (* [program] of the program *)
 MetaRocq Quote Recursively Definition p_ack35 := ack35.
 
-Time Definition testack352 := Eval lazy in test p_ack35. (* 0.041 *)
+Definition testack352 := Eval lazy in test p_ack35. (* 0.041 *)
 
 (** mutual recursion **)
 Inductive tree (A:Set) : Set :=
@@ -116,7 +116,7 @@ Arguments fcons {A}.
 Arguments node {A}.
 Definition sf: forest bool := (fcons (node true (leaf false)) (leaf true)).
 MetaRocq Quote Recursively Definition p_sf := sf.
-Time Definition testp_sf := Eval lazy in test p_sf.
+Definition testp_sf := Eval lazy in test p_sf.
 
 Fixpoint tree_size (t:tree bool) : nat :=
   match t with
@@ -230,7 +230,7 @@ Definition fib : nat -> nat := fun n => fibrec n (pair 0 1).
 Definition fib9 := fib 9.
 MetaRocq Quote Recursively Definition cbv_fib9 :=
   ltac:(let t:=(eval cbv in fib9) in exact t).
-Time Definition ans_fib9 :=
+Definition ans_fib9 :=
   Eval lazy in (test cbv_fib9).
 (* [program] of the program *)
 MetaRocq Quote Recursively Definition p_fib9 := fib9.
@@ -265,7 +265,7 @@ Fixpoint PListToList {A:Set} (l:PList A) {struct l} : list A :=
     | succ l' => unzip (PListToList l')
   end.
 
-Time Definition test_myPList := Eval compute in PListToList myPList.
+Definition test_myPList := Eval compute in PListToList myPList.
 
 Fixpoint gen_sumPList {A:Set} (l:PList A) {struct l} : (A->nat)->nat :=
   match l in PList A return (A->nat)->nat with
@@ -346,7 +346,7 @@ MetaRocq Quote Recursively Definition cbv_provedCopyx :=
 Definition ans_provedCopyx :=
   Eval lazy in (test cbv_provedCopyx).
 MetaRocq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
-Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
+Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
 (* We don't run this one every time as it is really expensive *)
 (*Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).*)
 

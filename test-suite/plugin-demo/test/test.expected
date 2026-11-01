@@ -1,0 +1,17 @@
+Abbreviation plus := Nat.add
+Expands to: Abbreviation Corelib.Init.Peano.plus
+Declared in library Corelib.Init.Peano, line 91, characters 0-44
+
+Nat.add : nat -> nat -> nat
+
+Nat.add is not universe polymorphic
+Arguments Nat.add (n m)%_nat_scope
+Nat.add is transparent
+Expands to: Constant Corelib.Init.Nat.add
+Declared in library Corelib.Init.Nat, line 49, characters 9-12
+(1 + 2)
+y: Point -> nat
+x: Point -> nat
+Build_Point: nat -> nat -> Point
+_y: Lens Point Point nat nat
+_x: Lens Point Point nat nat

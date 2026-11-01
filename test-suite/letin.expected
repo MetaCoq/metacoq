@@ -1,0 +1,2 @@
+eq_refl : letin_from_syntax = test
+     : letin_from_syntax = test

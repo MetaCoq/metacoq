@@ -34,9 +34,11 @@ Ltac constructor_tac :=
   end.
 
 Goal True.
+Proof.
   constructor_tac.
 Qed.
 
 Goal True + False.
+Proof.
   repeat constructor_tac.
 Qed.

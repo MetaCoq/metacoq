@@ -1,0 +1,8 @@
+fun p : Point ?A => coordx _ p
+     : Point ?A -> ?A
+where
+?A : [p : Point ?A |- Set] (p cannot be used)
+{| coordx := 0; coordy := 1 |}
+     : Point nat
+eq_refl : coordx _ {| coordx := 0; coordy := 1 |} = 0
+     : coordx _ {| coordx := 0; coordy := 1 |} = 0

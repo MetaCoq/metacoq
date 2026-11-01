@@ -1,0 +1,182 @@
+Environment: 
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Program: O
+Environment: 
+
+Program: fun x => x
+Environment: 
+Inductive eq(0 parameters,propositional, elimination into any sort) := 
+| eq_refl 0 arguments
+Inductive bool(0 parameters,computational, elimination into any sort) := 
+| true 0 arguments
+| false 0 arguments
+Program: fun X => fun x => fun e => true
+Environment: 
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition Corelib.Init.Nat.add := fun n => (let fix add { struct 0 } := 
+fun n0 => fun m => match n0 with 
+O => m
+ | S p  => S[(add p m)]
+end
+
+ in add) n
+Program: Corelib.Init.Nat.add O (S[O])
+Environment: 
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Inductive t(0 parameters,computational, elimination into any sort) := 
+| nil 0 arguments
+| cons 3 arguments
+Definition Corelib.Init.Nat.add := fun n => (let fix add { struct 0 } := 
+fun n0 => fun m => match n0 with 
+O => m
+ | S p  => S[(add p m)]
+end
+
+ in add) n
+Inductive t(0 parameters,computational, elimination into any sort) := 
+| nil 0 arguments
+| cons 3 arguments
+Definition Stdlib.Vectors.VectorDef.case0 := fun H => fun v => match v with 
+nil => H
+ | cons h  n  t  => ∎
+end
+
+Definition Stdlib.Vectors.VectorDef.caseS' := fun v => match v with 
+nil => ∎
+ | cons h  n0  t  => fun P => fun H => H h t
+end
+
+Definition Stdlib.Vectors.VectorDef.rect2 := fun bas => fun rect => fun n => fun v1 => (let fix rect2_fix { struct 1 } := 
+fun n0 => fun v10 => match v10 with 
+nil => fun v2 => Stdlib.Vectors.VectorDef.case0 bas v2
+ | cons h1  n'  t1  => fun v2 => Stdlib.Vectors.VectorDef.caseS' v2 ∎ (fun h2 => fun t2 => rect n' t1 t2 (rect2_fix n' t1 t2) h1 h2)
+end
+
+ in rect2_fix) n v1
+Definition Stdlib.Vectors.VectorDef.map2 := fun g => Stdlib.Vectors.VectorDef.rect2 nil (fun n => fun v1 => fun v2 => fun H => fun a => fun b => cons[(g a b) n H])
+Definition MetaRocq.TestSuite.erasure_live_test.vplus := fun n => Stdlib.Vectors.VectorDef.map2 Corelib.Init.Nat.add n
+Program: cons[(Corelib.Init.Nat.add O (S[(S[O])])) (S[O]) (MetaRocq.TestSuite.erasure_live_test.vplus (S[O]) (cons[(S[O]) O nil]) (cons[(S[(S[(S[O])])]) O nil]))]
+Closed under the global context
+Environment: 
+Inductive sig(0 parameters,computational, elimination into any sort) := 
+| exist 2 arguments
+Definition Corelib.Init.Specif.proj1_sig := fun A => fun P => fun e => match e with 
+exist a  b  => a
+end
+
+Definition Corelib.Program.Wf.Fix_F_sub := fun A => fun R => fun P => fun F_sub => fun x => fun r => (let fix Fix_F_sub { struct 1 } := 
+fun x0 => fun r0 => F_sub x0 (fun y => Fix_F_sub (Corelib.Init.Specif.proj1_sig ∎ ∎ y) ∎)
+ in Fix_F_sub) x ∎
+Definition Corelib.Program.Wf.Fix_sub := fun A => fun R => fun Rwf => fun P => fun F_sub => fun x => Corelib.Program.Wf.Fix_F_sub ∎ ∎ ∎ F_sub x ∎
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_live_test.provedCopy := Corelib.Program.Wf.Fix_sub ∎ ∎ ∎ ∎ (fun recarg => fun provedCopy' => let n := recarg in 
+let provedCopy := fun n0 => fun recproof => provedCopy' (exist[n0 ∎]) in 
+let program_branch_0 := fun Heq_n => O in 
+let program_branch_1 := fun k => fun Heq_n => S[(provedCopy k ∎)] in 
+(match n with 
+O => program_branch_0
+ | S k  => program_branch_1 k
+end
+) ∎)
+Definition MetaRocq.TestSuite.erasure_live_test.x := S[(S[(S[O])])]
+Definition MetaRocq.TestSuite.erasure_live_test.provedCopyx := MetaRocq.TestSuite.erasure_live_test.provedCopy MetaRocq.TestSuite.erasure_live_test.x
+Program: MetaRocq.TestSuite.erasure_live_test.provedCopyx
+Environment: 
+Inductive sig(0 parameters,computational, elimination into any sort) := 
+| exist 1 arguments
+Definition Corelib.Init.Specif.proj1_sig := fun e => let a := e in 
+a
+Definition Corelib.Program.Wf.Fix_F_sub := fun F_sub => fun x => (let fix Fix_F_sub { struct 1 } := 
+fun x0 => fun r => F_sub x0 (fun y => Fix_F_sub (Corelib.Init.Specif.proj1_sig y) ∎)
+ in Fix_F_sub) x ∎
+Definition Corelib.Program.Wf.Fix_sub := fun F_sub => fun x => Corelib.Program.Wf.Fix_F_sub F_sub x
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_live_test.provedCopy := Corelib.Program.Wf.Fix_sub (fun recarg => fun provedCopy' => let n := recarg in 
+let provedCopy := fun n0 => fun recproof => provedCopy' n0 in 
+let program_branch_0 := fun Heq_n => O in 
+let program_branch_1 := fun k => fun Heq_n => S[(provedCopy k ∎)] in 
+(match n with 
+O => program_branch_0
+ | S k  => program_branch_1 k
+end
+) ∎)
+Definition MetaRocq.TestSuite.erasure_live_test.x := S[(S[(S[O])])]
+Definition MetaRocq.TestSuite.erasure_live_test.provedCopyx := MetaRocq.TestSuite.erasure_live_test.provedCopy MetaRocq.TestSuite.erasure_live_test.x
+Program: MetaRocq.TestSuite.erasure_live_test.provedCopyx
+P_provedCopyx =
+"Environment: 
+Inductive sig(0 parameters,computational, elimination into any sort) := 
+| exist 1 arguments
+Definition Corelib.Init.Specif.proj1_sig := fun e => match e with 
+exist a  => a
+end
+
+Definition Corelib.Program.Wf.Fix_F_sub := fun F_sub => fun x => (let fix Fix_F_sub { struct 1 } := 
+fun x0 => fun r => F_sub x0 (fun y => Fix_F_sub (Corelib.Init.Specif.proj1_sig y) ∎)
+ in Fix_F_sub) x ∎
+Definition Corelib.Program.Wf.Fix_sub := fun F_sub => fun x => Corelib.Program.Wf.Fix_F_sub F_sub x
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_live_test.x := S[(S[(S[O])])]
+Program: Corelib.Program.Wf.Fix_sub (fun recarg => fun provedCopy' => let n := recarg in 
+let provedCopy := fun n0 => fun recproof => provedCopy' (exist[n0]) in 
+let program_branch_0 := fun Heq_n => O in 
+let program_branch_1 := fun k => fun Heq_n => S[(provedCopy k ∎)] in 
+(match n with 
+O => program_branch_0
+ | S k  => program_branch_1 k
+end
+) ∎) MetaRocq.TestSuite.erasure_live_test.x"
+     : string
+Environment: 
+CoInductive Stream(0 parameters,computational, elimination into any sort) := 
+| Cons 2 arguments
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_live_test.ones := let cofix ones { struct 0 } := 
+Cons[(S[O]) ones]
+ in ones
+Program: MetaRocq.TestSuite.erasure_live_test.ones
+Environment: 
+CoInductive Stream(0 parameters,computational, elimination into any sort) := 
+| Cons 2 arguments
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_live_test.ones := let fix ones { struct 0 } := 
+lazy (Cons[(S[O]) ones])
+ in ones
+Program: MetaRocq.TestSuite.erasure_live_test.ones
+Environment: 
+CoInductive Stream(0 parameters,computational, elimination into any sort) := 
+| Cons 2 arguments
+Definition Stdlib.Streams.Streams.hd := fun x => match force x with 
+Cons a  s  => a
+end
+
+Definition Stdlib.Streams.Streams.tl := fun x => match force x with 
+Cons a  s  => s
+end
+
+Definition Stdlib.Streams.Streams.map := fun f => let fix map { struct 1 } := 
+fun s => lazy (Cons[(f (Stdlib.Streams.Streams.hd s)) (map (Stdlib.Streams.Streams.tl s))])
+ in map
+Inductive nat(0 parameters,computational, elimination into any sort) := 
+| O 0 arguments
+| S 1 arguments
+Definition MetaRocq.TestSuite.erasure_live_test.ones := let fix ones { struct 0 } := 
+lazy (Cons[(S[O]) ones])
+ in ones
+Program: Stdlib.Streams.Streams.map (fun f => S[f]) MetaRocq.TestSuite.erasure_live_test.ones

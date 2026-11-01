@@ -59,7 +59,7 @@ jobs:
               sudo chown -R 1000:1000 .
             endGroup
             startGroup "Install dune with the rocq language"
-              opam install -y "dune>=3.21"
+              opam install -y "dune>=3.22"
             endGroup
           script: |
             startGroup "Build project"

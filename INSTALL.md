@@ -55,7 +55,7 @@ To compile the library, you need:
 - The `Rocq` version corrsponding to your branch (you can use the `coq.dev` package
   for the `main` branch).
 - `OCaml` (tested with `4.14.0`)
-- [`dune`](https://dune.build) 3.21 or later
+- [`dune`](https://dune.build) 3.22 or later
 - [`Equations 1.3`](http://mattam82.github.io/Rocq-Equations/)
 
 The recommended way to build a development environment for MetaRocq is
@@ -118,7 +118,11 @@ MetaRocq is built with [`dune`](https://dune.build) (see `dune-project`):
   libraries, and the OCaml sources of the plugins in `src`.
 
 - `dune test` (or `make test`) builds and checks the `test-suite` and the
-  `examples`.
+  `examples`, as well as the output of the `translations`. The output of a
+  file `foo.v` is written to `_build/default/.../foo.output` rather than to the
+  terminal, and compared with the expected output in `foo.expected`, which
+  `dune promote` updates. Only the files that print something have a
+  `.expected` file.
 
 - `dune install` (or `make install`) installs the libraries in `Rocq`'s
   `user-contrib` library and the plugins as findlib libraries. Then the

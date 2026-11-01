@@ -1,0 +1,166 @@
+eq_refl : sbox zero_leq_zero = zero_leq_zero'
+     : sbox zero_leq_zero = zero_leq_zero'
+sle_irrelevant_syn =
+tLam "n"
+  (tInd
+     {|
+       inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+       inductive_ind := 0
+     |} [])
+  (tLam "m"
+     (tInd
+        {|
+          inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+          inductive_ind := 0
+        |} [])
+     (tLambda {| binder_name := nNamed "p"; binder_relevance := Irrelevant |}
+        (tApp
+           (tInd
+              {|
+                inductive_mind :=
+                  (MPfile ["sprop_tests"; "TestSuite"; "MetaRocq"], "sle");
+                inductive_ind := 0
+              |} [])
+           [tRel 1; tRel 0])
+        (tLambda
+           {| binder_name := nNamed "q"; binder_relevance := Irrelevant |}
+           (tApp
+              (tInd
+                 {|
+                   inductive_mind :=
+                     (MPfile ["sprop_tests"; "TestSuite"; "MetaRocq"], "sle");
+                   inductive_ind := 0
+                 |} [])
+              [tRel 2; tRel 1])
+           (tApp
+              (tConstruct
+                 {|
+                   inductive_mind :=
+                     (MPfile ["Logic"; "Init"; "Corelib"], "eq");
+                   inductive_ind := 0
+                 |} 0 [])
+              [tApp
+                 (tInd
+                    {|
+                      inductive_mind :=
+                        (MPfile ["sprop_tests"; "TestSuite"; "MetaRocq"],
+                         "sBox");
+                      inductive_ind := 0
+                    |} [])
+                 [tApp
+                    (tInd
+                       {|
+                         inductive_mind :=
+                           (MPfile ["sprop_tests"; "TestSuite"; "MetaRocq"],
+                            "sle");
+                         inductive_ind := 0
+                       |} [])
+                    [tRel 3; tRel 2]];
+               tApp
+                 (tConstruct
+                    {|
+                      inductive_mind :=
+                        (MPfile ["sprop_tests"; "TestSuite"; "MetaRocq"],
+                         "sBox");
+                      inductive_ind := 0
+                    |} 0 [])
+                 [tApp
+                    (tInd
+                       {|
+                         inductive_mind :=
+                           (MPfile ["sprop_tests"; "TestSuite"; "MetaRocq"],
+                            "sle");
+                         inductive_ind := 0
+                       |} [])
+                    [tRel 3; tRel 2];
+                  tRel 0]]))))
+     : term
+{|
+  mind_entry_record := None;
+  mind_entry_finite := Finite;
+  mind_entry_params := [];
+  mind_entry_inds :=
+    [{|
+       mind_entry_typename := "sle";
+       mind_entry_arity :=
+         tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+           (tInd
+              {|
+                inductive_mind :=
+                  (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                inductive_ind := 0
+              |} [])
+           (tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+              (tInd
+                 {|
+                   inductive_mind :=
+                     (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                   inductive_ind := 0
+                 |} [])
+              (tSort sSProp));
+       mind_entry_consnames := ["sle_0"; "sle_S"];
+       mind_entry_lc :=
+         [tPro "n"
+            (tInd
+               {|
+                 inductive_mind :=
+                   (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                 inductive_ind := 0
+               |} [])
+            (tApp (tRel 1)
+               [tConstruct
+                  {|
+                    inductive_mind :=
+                      (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                    inductive_ind := 0
+                  |} 0 [];
+                tRel 0]);
+          tPro "n"
+            (tInd
+               {|
+                 inductive_mind :=
+                   (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                 inductive_ind := 0
+               |} [])
+            (tPro "m"
+               (tInd
+                  {|
+                    inductive_mind :=
+                      (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                    inductive_ind := 0
+                  |} [])
+               (tProd
+                  {| binder_name := nAnon; binder_relevance := Irrelevant |}
+                  (tApp (tRel 2) [tRel 1; tRel 0])
+                  (tApp (tRel 3)
+                     [tApp
+                        (tConstruct
+                           {|
+                             inductive_mind :=
+                               (MPfile ["Datatypes"; "Init"; "Corelib"],
+                                "nat");
+                             inductive_ind := 0
+                           |} 1 [])
+                        [tRel 2];
+                      tApp
+                        (tConstruct
+                           {|
+                             inductive_mind :=
+                               (MPfile ["Datatypes"; "Init"; "Corelib"],
+                                "nat");
+                             inductive_ind := 0
+                           |} 1 [])
+                        [tRel 1]])))]
+     |}];
+  mind_entry_universes := Monomorphic_entry;
+  mind_entry_template := false;
+  mind_entry_variance := None;
+  mind_entry_private := None
+|}
+Inductive sle : nat -> nat -> SProp :=
+    sle_0 : forall n : nat, sle 0 n
+  | sle_S : forall n m : nat, sle n m -> sle (S n) (S m).
+
+Arguments sle (_ _)%_nat_scope
+Arguments sle_0 n%_nat_scope
+Arguments sle_S (n m)%_nat_scope _

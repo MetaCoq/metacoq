@@ -1,0 +1,12 @@
+Corelib.Init.Datatypes.nat has been translated.
+Corelib.Init.Datatypes.list has been translated.
+listᵗ : forall A : TYPE, list A.1 -> Type
+     : forall A : TYPE, list A.1 -> Type
+nilᵗ : forall A : TYPE, listᵗ A []
+     : forall A : TYPE, listᵗ A []
+consᵗ
+:
+forall (A : TYPE) (x : El A) (lH : ∃ l : list A.1, listᵗ A l),
+listᵗ A (x.1 :: lH.1)
+     : forall (A : TYPE) (x : El A) (lH : ∃ l : list A.1, listᵗ A l),
+       listᵗ A (x.1 :: lH.1)

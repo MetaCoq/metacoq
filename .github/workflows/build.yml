@@ -23,6 +23,8 @@ jobs:
         run: ./checktodos.sh
 
   build:
+    # The opam build is deactivated on main: it is covered by the nix build
+    if: github.ref != 'refs/heads/main' && github.base_ref != 'main'
     runs-on: ubuntu-latest
 
     strategy:

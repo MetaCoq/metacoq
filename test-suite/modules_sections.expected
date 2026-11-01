@@ -1,0 +1,45 @@
+(tConst (MPbound ["modules_sections"; "TestSuite"; "MetaRocq"] "Y" 1, "x") [])
+(tConst (MPbound ["modules_sections"; "TestSuite"; "MetaRocq"] "X" 0, "x") [])
+{| my_projT1 := nat; my_projT2 := X.x |}
+(tConst (MPbound ["modules_sections"; "TestSuite"; "MetaRocq"] "X" 2, "x") [])
+{| my_projT1 := nat; my_projT2 := X.x |}
+(tConst (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"], "b") [])
+"lol"
+bb
+     : Type
+(tVar "x")
+"lol"
+bx
+     : nat
+(tConst (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"], "b") [])
+{| my_projT1 := Type; my_projT2 := b |}
+eq_refl
+:
+print_term (empty_ext empty_global_env) [] true
+  (tConst (MPfile ["test"; "Examples"; "MetaRocq"], "b") []) =
+"MetaRocq.Examples.test.b"
+     : print_term (empty_ext empty_global_env) [] true
+         (tConst (MPfile ["test"; "Examples"; "MetaRocq"], "b") []) =
+       "MetaRocq.Examples.test.b"
+(tConst
+   (MPdot (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"]) "S", "b") [])
+{| my_projT1 := Type; my_projT2 := b |}
+(tConst
+   (MPdot (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"]) "S", "b") [])
+{| my_projT1 := Type; my_projT2 := S.b |}
+(tConst
+   (MPfile ["Common"; "TemplateMonad"; "Template"; "MetaRocq"], "my_projT2")
+   [Universe.of_level (Level.level "MetaRocq.TestSuite.modules_sections.300")])
+0
+
+t' : nat
+t : nat
+u : nat
+A.t' : nat
+A.t : nat
+A.t'' : nat
+A.t' : nat
+A.t : nat
+(MPdot (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"]) "B")
+(MPdot (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"]) "S")
+(MPdot (MPfile ["modules_sections"; "TestSuite"; "MetaRocq"]) "X")

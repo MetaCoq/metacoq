@@ -1,0 +1,60 @@
+     = [PureClause [Eqv (Var 5) (Var 3)] [] 4 eq_refl;
+        PosSpaceClause [] []
+          [Lseg (Var 1) (Var 2); Lseg (Var 1) (Var 3); 
+           Next (Var 3) (Var 4); Lseg (Var 4) (Var 5)];
+        NegSpaceClause [] [Lseg (Var 2) (Var 3); Lseg (Var 3) (Var 5)] []]
+     : list clause
+     = [PosSpaceClause [] []
+          [Next (Var 9) (Var 3); Lseg (Var 7) (Var 8); 
+           Lseg (Var 1) (Var 6); Next (Var 10) (Var 2); 
+           Next (Var 3) (Var 7); Lseg (Var 5) (Var 10); 
+           Next (Var 4) (Var 9); Next (Var 13) (Var 5); 
+           Lseg (Var 8) (Var 5); Next (Var 11) (Var 12);
+           Next (Var 12) (Var 11); Next (Var 2) (Var 4); 
+           Lseg (Var 6) (Var 3)];
+        NegSpaceClause []
+          [Lseg (Var 2) (Var 10); Lseg (Var 12) (Var 11);
+           Lseg (Var 11) (Var 12); Lseg (Var 6) (Var 3);
+           Lseg (Var 1) (Var 6); Lseg (Var 13) (Var 5); 
+           Lseg (Var 10) (Var 2)]
+          []]
+     : list clause
+     = [PosSpaceClause [] []
+          [Next (Var 2) (Var 13); Lseg (Var 3) (Var 6);
+           Lseg (Var 10) (Var 5); Next (Var 4) (Var 20);
+           Next (Var 16) (Var 11); Lseg (Var 6) (Var 14);
+           Next (Var 20) (Var 11); Lseg (Var 17) (Var 6);
+           Lseg (Var 19) (Var 13); Lseg (Var 11) (Var 1);
+           Next (Var 15) (Var 13); Next (Var 1) (Var 17);
+           Next (Var 5) (Var 18); Lseg (Var 8) (Var 5);
+           Next (Var 7) (Var 13); Next (Var 14) (Var 2);
+           Next (Var 18) (Var 6); Next (Var 12) (Var 17);
+           Lseg (Var 13) (Var 8); Next (Var 9) (Var 10)];
+        NegSpaceClause []
+          [Lseg (Var 15) (Var 2); Lseg (Var 4) (Var 6);
+           Lseg (Var 19) (Var 13); Lseg (Var 10) (Var 5);
+           Lseg (Var 7) (Var 13); Lseg (Var 2) (Var 13);
+           Lseg (Var 16) (Var 11); Lseg (Var 3) (Var 6);
+           Lseg (Var 12) (Var 17); Lseg (Var 9) (Var 10)]
+          []]
+     : list clause
+     = [PosSpaceClause [] []
+          [Next (Var 1) (Var 14); Next (Var 14) (Var 19);
+           Next (Var 5) (Var 8); Next (Var 13) (Var 18);
+           Lseg (Var 18) (Var 13); Lseg (Var 15) (Var 2);
+           Next (Var 17) (Var 15); Next (Var 20) (Var 6);
+           Next (Var 6) (Var 13); Lseg (Var 11) (Var 19);
+           Next (Var 7) (Var 12); Next (Var 10) (Var 17);
+           Lseg (Var 16) (Var 20); Next (Var 2) (Var 20);
+           Next (Var 19) (Var 4); Lseg (Var 9) (Var 3);
+           Lseg (Var 8) (Var 12); Lseg (Var 12) (Var 20);
+           Next (Var 4) (Var 6); Next (Var 3) (Var 20)];
+        NegSpaceClause []
+          [Lseg (Var 6) (Var 18); Lseg (Var 4) (Var 6); 
+           Lseg (Var 7) (Var 6); Lseg (Var 1) (Var 4);
+           Lseg (Var 11) (Var 19); Lseg (Var 18) (Var 13);
+           Lseg (Var 16) (Var 20); Lseg (Var 10) (Var 20);
+           Lseg (Var 5) (Var 12); Lseg (Var 3) (Var 20); 
+           Lseg (Var 9) (Var 3)]
+          []]
+     : list clause

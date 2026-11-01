@@ -1,0 +1,4 @@
+eq_refl : xy = 0
+     : xy = 0
+eq_refl : xy0 = 1
+     : xy0 = 1

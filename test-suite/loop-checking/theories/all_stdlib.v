@@ -1,3 +1,5 @@
+(* Load the whole Stdlib, including its deprecated and warning-raising files *)
+#[warning="-deprecated-library-file,-warn-library-file"]
 From Stdlib Require Strings.Ascii
 Strings.String
 Strings.BinaryString

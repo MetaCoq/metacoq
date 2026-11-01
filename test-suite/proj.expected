@@ -1,0 +1,78 @@
+(tProj
+   {|
+     proj_ind :=
+       {|
+         inductive_mind :=
+           (MPfile ["proj"; "TestSuite"; "MetaRocq"], "prod'");
+         inductive_ind := 0
+       |};
+     proj_npars := 2;
+     proj_arg := 1
+   |}
+   (tApp
+      (tConstruct
+         {|
+           inductive_mind :=
+             (MPfile ["proj"; "TestSuite"; "MetaRocq"], "prod'");
+           inductive_ind := 0
+         |} 0 [])
+      [tInd
+         {|
+           inductive_mind :=
+             (MPfile ["Datatypes"; "Init"; "Corelib"], "bool");
+           inductive_ind := 0
+         |} [];
+       tInd
+         {|
+           inductive_mind := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+           inductive_ind := 0
+         |} [];
+       tConstruct
+         {|
+           inductive_mind :=
+             (MPfile ["Datatypes"; "Init"; "Corelib"], "bool");
+           inductive_ind := 0
+         |} 0 [];
+       tApp
+         (tConstruct
+            {|
+              inductive_mind :=
+                (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+              inductive_ind := 0
+            |} 1 [])
+         [tApp
+            (tConstruct
+               {|
+                 inductive_mind :=
+                   (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                 inductive_ind := 0
+               |} 1 [])
+            [tApp
+               (tConstruct
+                  {|
+                    inductive_mind :=
+                      (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                    inductive_ind := 0
+                  |} 1 [])
+               [tApp
+                  (tConstruct
+                     {|
+                       inductive_mind :=
+                         (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                       inductive_ind := 0
+                     |} 1 [])
+                  [tConstruct
+                     {|
+                       inductive_mind :=
+                         (MPfile ["Datatypes"; "Init"; "Corelib"], "nat");
+                       inductive_ind := 0
+                     |} 0 []]]]]]))
+(tInd
+   {|
+     inductive_mind := (MPfile ["proj"; "TestSuite"; "MetaRocq"], "prod'");
+     inductive_ind := 0
+   |} [])
+eq_refl : x = snd' {| fst' := true; snd' := 4 |}
+     : x = snd' {| fst' := true; snd' := 4 |}
+eq_refl : x = 4
+     : x = 4

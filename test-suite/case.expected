@@ -1,0 +1,2 @@
+eq_refl : f = f_from_syntax
+     : f = f_from_syntax

@@ -945,6 +945,7 @@ Lemma inversion_Rel :
       (wf_local Σ Γ) *
       (nth_error Γ n = Some decl) *
       (Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T).
+Proof.
 Admitted.
 
 Lemma well_prop_wf :
@@ -1015,6 +1016,7 @@ Section Plugin.
     {| decl_name := banon; decl_body := None; decl_type := P |}.
 
   Definition trivial_hyp (h:list form) v : forall h : form, In h [] -> sem h v.
+  Proof.
     intro. destruct 1.
   Qed.
 
@@ -1029,6 +1031,7 @@ Section Plugin.
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
       | _ => NotSolvable "not a valid formula" end
     | None => NotSolvable "not a formaula" end.
+  Proof.
     destruct (reify (empty_ext _) gamma Mphi); try exact (notSolvable _).
     destruct (tauto_proc (size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
     exact (tauto_sound (size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
@@ -1071,10 +1074,12 @@ Section Plugin.
          | exact H].
 
   Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
+  Proof.
     tauto.
   Qed.
 
   Lemma test2 : forall (A B C:Prop), (A->C)->(B->C)->A\/B->B.
+  Proof.
     Fail tauto.
   Abort.
 

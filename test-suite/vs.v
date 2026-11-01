@@ -486,6 +486,7 @@ Proof.
   cbn. rewrite pure_atom_cmp_rfl. assumption.
 Qed.
 
+Create Rewrite HintDb comp.
 Local Hint Rewrite @comp_refl using solve[auto] : comp.
 
 Ltac comp_tac :=
@@ -1154,6 +1155,11 @@ Definition print_ce_clause (R: list (var * expr)) (cl : clause) (ct : ce_type)
 End DebuggingHooks.
 
 Export DebuggingHooks.
+
+Create HintDb DEBUG_UNFOLD.
+#[global] Hint Constants Opaque : DEBUG_UNFOLD.
+#[global] Hint Projections Opaque : DEBUG_UNFOLD.
+#[global] Hint Variables Opaque : DEBUG_UNFOLD.
 
 #[global]
 Hint Unfold print_new_pures_set print_wf_set print_inferred_list print_spatial_model
@@ -1986,7 +1992,7 @@ End HeapResolve.
 (* veristar.v *)
 
 Import Superposition. Import HeapResolve.
-Require Recdef.
+From Stdlib Require Recdef.
 
 (** The VeriStar interface *)
 
@@ -2171,6 +2177,7 @@ Function the_loop
          else the_loop (Pos.pred n) sigma' nc' nu_s c
   | (Superposition.Aborted l, units, _, _) => Aborted l cl
        end.
+Proof.
 Admitted.
 (**************
 Proof.
@@ -2349,6 +2356,8 @@ Definition myMain :=
                             harder_ent2; harder_ent3].
 
 Set Warnings "-extraction-opaque-accessed".
+(* The extracted files are only checked to be produced, in the build directory *)
+Set Warnings "-extraction-default-directory".
 Extraction "myMain" myMain.
 
 Definition ce_harder_ent := check_entailment harder_ent.

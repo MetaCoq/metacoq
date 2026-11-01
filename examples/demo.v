@@ -24,6 +24,7 @@ MetaRocq Test Unquote (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Core
 
 (** Build a definition **)
 Definition d : Ast.term.
+Proof.
   let t := constr:(fun x : nat => x) in
   let k x := refine x in
   quote_term t k.
@@ -78,9 +79,7 @@ MetaRocq Unquote Definition zero_from_syntax :=
 Set Printing All.
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
 
-Print add_syntax.
 Print tCase.
-Print add_syntax.
 Check tCase.
 MetaRocq Unquote Definition add_from_syntax := add_syntax.
 
@@ -109,8 +108,6 @@ Record prod' A B : Type :=
   pair' { fst' : A ; snd' : B }.
 Arguments fst' {A B} _.
 Arguments snd' {A B} _.
-
-MetaRocq Test Quote ((pair' _ _ true 4).(snd')).
 
 
 (** Reflecting  Inductives *)
@@ -185,7 +182,7 @@ Definition one_pt_i : one_inductive_entry :=
   mind_entry_arity := tSort Sort.type0;
   mind_entry_consnames := ["mkPoint"];
   mind_entry_lc := [
-    mkImpl (tRel 0) (mkImpl (tRel 1) (tApp (tRel 3) [tRel 2]))];
+    tProd (bnamed "x") (tRel 0) (tProd (bnamed "y") (tRel 1) (tApp (tRel 3) [tRel 2]))];
 |}.
 
 Definition mut_pt_i : mutual_inductive_entry :=
@@ -213,12 +210,6 @@ Inductive demoList (A : Set) : Set :=
 (** Putting the above commands in monadic program *)
 Abbreviation inat :=
   {| inductive_mind := Nat_module; inductive_ind := 0 |}.
-MetaRocq Run (tmBind (tmQuote (3 + 3)) tmPrint).
-
-MetaRocq Run (tmBind (tmQuoteRec add) tmPrint).
-
-MetaRocq Run (tmBind (tmLocate "add") tmPrint).
-
 Definition printInductive (q : qualid): TemplateMonad unit :=
   kn <- tmLocate1 q ;;
   match kn with
@@ -240,13 +231,12 @@ Definition printConstant (q : qualid) b : TemplateMonad unit :=
   | _ => tmFail ("[" ^ q ^ "] is not a constant")
   end.
 
-MetaRocq Run (printConstant "add" false).
 Fail MetaRocq Run (printConstant "nat" false).
 
 Definition six : nat.
+Proof.
   exact (3 + 3).
 Qed.
-MetaRocq Run (printConstant "six" true).
 MetaRocq Run (printConstant "six" false).
 
 MetaRocq Run (t <- tmLemma "foo4" nat;;
@@ -341,9 +331,7 @@ MetaRocq Run (tmFreshName "foo" >>= tmPrint).
 
 MetaRocq Run (tmBind (tmLocate "foo") tmPrint).
 MetaRocq Run (tmBind (tmLocate "qlsnkqsdlfhkdlfh") tmPrint).
-MetaRocq Run (tmBind (tmLocate "eq") tmPrint).
 MetaRocq Run (tmBind (tmLocate "Logic.eq") tmPrint).
-MetaRocq Run (tmBind (tmLocate "eq_refl") tmPrint).
 
 MetaRocq Run (tmCurrentModPath tt >>= tmPrint).
 

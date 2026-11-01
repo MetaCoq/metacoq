@@ -1,0 +1,77 @@
+[IndRef
+   {|
+     inductive_mind :=
+       (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+          "Foo"%bs,
+        "bar"%bs);
+     inductive_ind := 0
+   |};
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Foo"%bs,
+    "bar_rect"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Foo"%bs,
+    "bar_ind"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Foo"%bs,
+    "bar_rec"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Foo"%bs,
+    "bar_sind"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Foo"%bs,
+    "t"%bs)]%list
+[]%list
+[ConstRef
+   (MPdot
+      (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+         "Outer"%bs)
+      "Inner"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Outer"%bs,
+    "t"%bs)]%list
+[ConstRef
+   (MPdot
+      (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+         "Outer"%bs)
+      "Inner"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Outer"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot
+      (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+         "Outer"%bs)
+      "InnerF"%bs,
+    "t"%bs)]%list
+[ConstRef
+   (MPdot
+      (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+         "Outer"%bs)
+      "Inner"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+      "Outer"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot
+      (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+         "Outer"%bs)
+      "InnerT"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot
+      (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaRocq"%bs])
+         "Outer"%bs)
+      "InnerF"%bs,
+    "t"%bs)]%list

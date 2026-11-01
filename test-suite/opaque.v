@@ -3,7 +3,7 @@ From MetaRocq.Template Require Import All.
 
 Import MonadNotation ListNotations.
 
-Definition foo : nat. exact 0. Qed.
+Definition foo : nat. Proof. exact 0. Qed.
 
 Local Open Scope bs_scope.
 MetaRocq Quote Recursively Definition foo_syn := foo.
@@ -27,8 +27,8 @@ Proof.
   split;eexists;eexists;cbn; now intuition.
 Qed.
 
-Time MetaRocq Run (t <- tmQuoteRecTransp PeanoNat.Nat.le_add_r false ;;
+MetaRocq Run (t <- tmQuoteRecTransp PeanoNat.Nat.le_add_r false ;;
                   tmDefinition "add_comm_syn" t). (* quote respecting transparency *)
 
-Time MetaRocq Run (t <- tmQuoteRec PeanoNat.Nat.le_add_r ;;
+MetaRocq Run (t <- tmQuoteRec PeanoNat.Nat.le_add_r ;;
                   tmDefinition "add_comm_syn'" t). (* quote ignoring transparency settings  *)

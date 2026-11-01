@@ -58,4 +58,4 @@ Check eq_refl : check_model (("b" + 1) ≤ "a") = false.
 Check eq_refl : check_model ("a" ⊔ "b" ≤ "b" + 1).
 Check eq_refl : check_model ("a" ⊔ "a" + 1 = "a" + 1).
 Check eq_refl : check_model ("a" ⊔ "a" + 1 = "a") = false.
-Check eq_refl : check_model ("a" ≤ "a" ⊔ "b" ⊔ "b" + 1).
+Check eq_refl : check_model ("a" ≤ ("a" ⊔ "b") ⊔ "b" + 1).

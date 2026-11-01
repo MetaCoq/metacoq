@@ -30,7 +30,7 @@ Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaRocq SafeCheck bignat.
 MetaRocq RocqCheck bignat.
 
-Set Warnings "-notation-overriden".
+Set Warnings "-notation-overridden".
 From MetaRocq.TestSuite Require Import hott_example.
 
 MetaRocq SafeCheck @issect'.
@@ -38,7 +38,6 @@ MetaRocq SafeCheck @issect'.
 MetaRocq SafeCheck @ap_pp.
 MetaRocq RocqCheck ap_pp.
 
-Set MetaRocq Timing.
 
 From MetaRocq.TestSuite Require Import hott_example.
 

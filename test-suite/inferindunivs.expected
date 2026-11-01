@@ -1,0 +1,5 @@
+Inductive foo' : Type@{w} :=
+    newcons : forall (newty : Type@{v}) (_ : @id Type@{u} newty), foo'
+  | bar' : foo'.
+
+Arguments newcons newty%_type_scope new

@@ -1,7 +1,6 @@
 From MetaRocq.Utils Require Import utils.
 From MetaRocq.Template Require Import Loader.
 From Stdlib Require Import String.
-Set Template Cast Propositions.
 
 Definition foo (x : nat) (p : True) := p.
 

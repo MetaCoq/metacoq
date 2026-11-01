@@ -1,0 +1,40 @@
+     = "a -> 5, b -> 4, c -> 1, d -> 2, e -> 4"
+     : string
+consistent ex_model ≡ true
+     : consistent ex_model = true
+consistent (model_of levels_abcde ex_loop_cstrs) ≡ false
+     : consistent (model_of levels_abcde ex_loop_cstrs) = false
+entails ex_model (univ c 4, Le, univ a 0) ≡ true
+     : entails ex_model (univ c 4, Le, univ a 0) = true
+entails ex_model (univ b 1, Le, univ a 0) ≡ true
+     : entails ex_model (univ b 1, Le, univ a 0) = true
+entails ex_model ex_loop_cstr ≡ false
+     : entails ex_model ex_loop_cstr = false
+     = "loop on [5,a,b+1,c+4,d+3,e+1]"
+     : string
+     = "0 -> 1, 1 -> 10, 2 -> 19, 3 -> 28, 4 -> 37, 5 -> 46, 6 -> 55, 7 -> 64, 8 -> 73, 9 -> 82"
+     : string
+consistent chain_model ≡ true
+     : consistent chain_model = true
+consistent (model_of (LevelSet.singleton c) above_cstrs) ≡ false
+     : consistent (model_of (LevelSet.singleton c) above_cstrs) = false
+     = "a -> 2, b -> 2, c -> 1, d -> 2, e -> 2"
+     : string
+     = "a -> 2, b -> 1, c -> 1, d -> 11, e -> 11"
+     : string
+consistent extended_model ≡ true
+     : consistent extended_model = true
+consistent
+  (model_of levels_abcde
+     (UnivConstraintSet.union initial_cstrs enforced_cstrs))
+≡ true
+     : consistent
+         (model_of levels_abcde
+            (UnivConstraintSet.union initial_cstrs enforced_cstrs)) =
+       true
+entails extended_model (univ b 10, Le, univ e 0) ≡ true
+     : entails extended_model (univ b 10, Le, univ e 0) = true
+entails extended_model (univ c 10, Le, univ e 0) ≡ true
+     : entails extended_model (univ c 10, Le, univ e 0) = true
+entails initial_model (univ b 10, Le, univ e 0) ≡ false
+     : entails initial_model (univ b 10, Le, univ e 0) = false

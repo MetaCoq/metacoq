@@ -10,6 +10,7 @@ Local Set Default Proof Mode "Classic".
 
 Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
 Goal True.
+Proof.
   run_template_program six (fun v => constr_eq v 6%nat).
 Abort.
 
@@ -34,6 +35,7 @@ Module TCMonomorphic.
   #[global] Hint Extern 0 HasFix => refine @tmFix : typeclass_instances.
   Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
   Goal True.
+  Proof.
     run_template_program six (fun v => constr_eq v 6%nat).
   Abort.
 End TCMonomorphic.
@@ -58,6 +60,7 @@ Module TC.
   #[global] Hint Extern 0 HasFix => refine @tmFix : typeclass_instances.
   Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
   Goal True.
+  Proof.
     run_template_program six (fun v => constr_eq v 6%nat).
   Abort.
 End TC.
@@ -131,6 +134,7 @@ Module Unquote.
             @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a))))))).
   Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
   Goal True.
+  Proof.
     run_template_program six (fun v => constr_eq v 6%nat).
   Abort.
 End Unquote.
@@ -152,6 +156,7 @@ Module NoGuard.
   Local Set Guard Checking.
   Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
   Goal True.
+  Proof.
     run_template_program six (fun v => constr_eq v 6%nat).
   Abort.
 End NoGuard.
@@ -257,27 +262,27 @@ Definition smallnum := (2^15)%N.
 Definition extremelysmallnum := (2^8)%N.
 
 (* This is pretty slow :-( *)
-Time Check ltac:(run_template_program (count_down_MR_tc extremelysmallnum) (fun v => exact v)). (* 5.378 secs (5.378u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_tc extremelysmallnum) (fun v => exact v)). (* 5.378 secs (5.378u,0.s) *)
 (* universes are apparently a bottleneck *)
-Time Check ltac:(run_template_program (count_down_MR_tc_monomorphic extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MR_unquote extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MR_noguard extremelysmallnum) (fun v => exact v)). (* 0.001 secs (0.001u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_tc_monomorphic extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_unquote extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_noguard extremelysmallnum) (fun v => exact v)). (* 0.001 secs (0.001u,0.s) *)
 (* test the actually used one *)
-Time Check ltac:(run_template_program (count_down_MR extremelysmallnum) (fun v => exact v)).
+Check ltac:(run_template_program (count_down_MR extremelysmallnum) (fun v => exact v)).
 (* now we use bigger numbers *)
-Time Check ltac:(run_template_program (count_down_MR_tc_monomorphic smallnum) (fun v => exact v)). (* 7.64 secs (7.64u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_tc_monomorphic smallnum) (fun v => exact v)). (* 7.64 secs (7.64u,0.s) *)
 (* unquote is a bit slower here *)
-Time Check ltac:(run_template_program (count_down_MR_unquote smallnum) (fun v => exact v)). (* 10.874 secs (10.874u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MR_noguard smallnum) (fun v => exact v)). (* 0.115 secs (0.115u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MR smallnum) (fun v => exact v)).
-Time Eval lazy in count_down_wf smallnum. (* 0.305 secs (0.305u,0.s) *)
-Time Eval cbv in count_down_wf smallnum. (* 0.328 secs (0.328u,0.s) *)
-Time Eval lazy in count_down_noguard smallnum. (* 0.138 secs (0.138u,0.s) *)
-Time Eval cbv in count_down_noguard smallnum. (* 0.15 secs (0.15u,0.s) *)
-Time Check ltac:(let v := count_down smallnum in exact v). (* 4.612 secs (4.612u,0.s) *)
-Time Check ltac2:(let v := count_down 'smallnum in exact $v). (* 2.404 secs (2.404u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_unquote smallnum) (fun v => exact v)). (* 10.874 secs (10.874u,0.s) *)
+Check ltac:(run_template_program (count_down_MR_noguard smallnum) (fun v => exact v)). (* 0.115 secs (0.115u,0.s) *)
+Check ltac:(run_template_program (count_down_MR smallnum) (fun v => exact v)).
+Eval lazy in count_down_wf smallnum. (* 0.305 secs (0.305u,0.s) *)
+Eval cbv in count_down_wf smallnum. (* 0.328 secs (0.328u,0.s) *)
+Eval lazy in count_down_noguard smallnum. (* 0.138 secs (0.138u,0.s) *)
+Eval cbv in count_down_noguard smallnum. (* 0.15 secs (0.15u,0.s) *)
+Check ltac:(let v := count_down smallnum in exact v). (* 4.612 secs (4.612u,0.s) *)
+Check ltac2:(let v := count_down 'smallnum in exact $v). (* 2.404 secs (2.404u,0.s) *)
 (* and now we can use even bigger numbers *)
-Time Eval native_compute in count_down_wf bignum. (* 1.133 secs (0.863u,0.s) *)
-Time Eval vm_compute in count_down_wf bignum. (* 0.432 secs (0.432u,0.s) *)
-Time Eval native_compute in count_down_noguard bignum. (* 0.336 secs (0.048u,0.s) *)
-Time Eval vm_compute in count_down_noguard bignum. (* 0.178 secs (0.178u,0.s) *)
+Eval native_compute in count_down_wf bignum. (* 1.133 secs (0.863u,0.s) *)
+Eval vm_compute in count_down_wf bignum. (* 0.432 secs (0.432u,0.s) *)
+Eval native_compute in count_down_noguard bignum. (* 0.336 secs (0.048u,0.s) *)
+Eval vm_compute in count_down_noguard bignum. (* 0.178 secs (0.178u,0.s) *)

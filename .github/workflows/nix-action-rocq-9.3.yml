@@ -272,16 +272,12 @@ jobs:
         "rocq-9.3" --argstr job "stdlib"
 name: Nix CI for bundle rocq-9.3
 on:
+  # pull_request_target workflows are always taken from the default branch
+  # (9.1), so they never run this file: use pull_request on PRs targeting 9.3
+  # instead. Fork PRs get no secrets, so they read from cachix but do not push.
   pull_request:
-    paths:
-    - .github/workflows/nix-action-rocq-9.3.yml
-  pull_request_target:
-    paths-ignore:
-    - .github/workflows/nix-action-rocq-9.3.yml
-    types:
-    - opened
-    - synchronize
-    - reopened
+    branches:
+    - '9.3'
   push:
     branches:
     - '9.3'

@@ -122,7 +122,10 @@ MetaRocq is built with [`dune`](https://dune.build) (see `dune-project`):
   file `foo.v` is written to `_build/default/.../foo.output` rather than to the
   terminal, and compared with the expected output in `foo.expected`, which
   `dune promote` updates. Only the files that print something have a
-  `.expected` file.
+  `.expected` file. The output of the `demo` and `metarocq_tour` examples
+  and of the `loop-checking` test depends on generated universe names: it is
+  kept off the terminal in the same way, but not checked (their `.expected`
+  files are generated as copies of their output).
 
 - `dune install` (or `make install`) installs the libraries in `Rocq`'s
   `user-contrib` library and the plugins as findlib libraries. Then the

@@ -49,13 +49,13 @@ Definition check_model c :=
   | None => false
   end.
 
-Check eq_refl : check_model ("a" ≤ "b").
-Check eq_refl : check_model ("b" ≤ "c").
-Check eq_refl : check_model ("a" + 1 ≤ "c").
-Check eq_refl : check_model ("a" + 2 ≤ "c") = false.
-Check eq_refl : check_model (("b" + 1) ≤ "a") = false.
-Check eq_refl : check_model (("b" + 1) ≤ "a") = false.
-Check eq_refl : check_model ("a" ⊔ "b" ≤ "b" + 1).
-Check eq_refl : check_model ("a" ⊔ "a" + 1 = "a" + 1).
-Check eq_refl : check_model ("a" ⊔ "a" + 1 = "a") = false.
-Check eq_refl : check_model ("a" ≤ ("a" ⊔ "b") ⊔ "b" + 1).
+Example check_model_1 : check_model ("a" ≤ "b") := eq_refl.
+Example check_model_2 : check_model ("b" ≤ "c") := eq_refl.
+Example check_model_3 : check_model ("a" + 1 ≤ "c") := eq_refl.
+Example check_model_4 : check_model ("a" + 2 ≤ "c") = false := eq_refl.
+Example check_model_5 : check_model (("b" + 1) ≤ "a") = false := eq_refl.
+Example check_model_6 : check_model (("b" + 1) ≤ "a") = false := eq_refl.
+Example check_model_7 : check_model ("a" ⊔ "b" ≤ "b" + 1) := eq_refl.
+Example check_model_8 : check_model ("a" ⊔ "a" + 1 = "a" + 1) := eq_refl.
+Example check_model_9 : check_model ("a" ⊔ "a" + 1 = "a") = false := eq_refl.
+Example check_model_10 : check_model ("a" ≤ ("a" ⊔ "b") ⊔ "b" + 1) := eq_refl.

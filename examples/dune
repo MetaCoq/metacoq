@@ -8,6 +8,18 @@
   MetaRocq.PCUIC MetaRocq.SafeChecker MetaRocq.TemplatePCUIC MetaRocq.Erasure
   MetaRocq.SafeCheckerPlugin MetaRocq.ErasurePlugin))
 
+; The output of the demo and of the tour depends on generated universe names,
+; so it is not checked. To keep it off the terminal, generate their
+; foo.expected file as a copy of their output: dune then writes the output of
+; foo.v to foo.output in _build, and the comparison of `dune test` always
+; succeeds. The other examples print nothing.
+
+(rule
+ (copy demo.output demo.expected))
+
+(rule
+ (copy metarocq_tour.output metarocq_tour.expected))
+
 (rule
  (alias runtest)
  (deps

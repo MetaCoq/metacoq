@@ -169,23 +169,36 @@ end.
 
 Definition tauto_s f := tauto_proc (size f) (mkS nil f).
 
-Eval compute in tauto_s (Imp Fa (Var 0)).
+Example tauto_fa : tauto_s (Imp Fa (Var 0)) = Valid := eq_refl.
 
-Eval compute in tauto_s (Imp (And (Var 0) (Var 1)) (Var 0)).
-Eval compute in tauto_s (Imp (And (Var 0) (Var 1)) (Var 1)).
-Eval compute in tauto_s (Imp (Var 0) (Imp (Var 1) (And (Var 0) (Var 1)))).
+Example tauto_and_l : tauto_s (Imp (And (Var 0) (Var 1)) (Var 0)) = Valid :=
+  eq_refl.
+Example tauto_and_r : tauto_s (Imp (And (Var 0) (Var 1)) (Var 1)) = Valid :=
+  eq_refl.
+Example tauto_and_i :
+  tauto_s (Imp (Var 0) (Imp (Var 1) (And (Var 0) (Var 1)))) = Valid :=
+  eq_refl.
 
-Eval compute in tauto_s (Imp (Var 0) (Or (Var 0) (Var 1))).
-Eval compute in tauto_s (Imp (Var 1) (Or (Var 0) (Var 1))).
-Eval compute in tauto_s (Imp (Imp (Var 0) (Var 2)) (Imp (Imp (Var 1) (Var 2)) (Imp (Or (Var 0) (Var 1)) (Var 2)))).
+Example tauto_or_l : tauto_s (Imp (Var 0) (Or (Var 0) (Var 1))) = Valid :=
+  eq_refl.
+Example tauto_or_r : tauto_s (Imp (Var 1) (Or (Var 0) (Var 1))) = Valid :=
+  eq_refl.
+Example tauto_or_e :
+  tauto_s (Imp (Imp (Var 0) (Var 2))
+    (Imp (Imp (Var 1) (Var 2)) (Imp (Or (Var 0) (Var 1)) (Var 2)))) = Valid :=
+  eq_refl.
 
-Eval compute in tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1)) (Var 1))).
-Eval compute in tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1))
-                            (Imp (Imp (Var 1) (Var 2)) (Var 1)))).
-Eval compute in tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1))
-                            (Imp (Imp (Var 1) (Var 2)) (Var 2)))).
-
-
+Example tauto_mp :
+  tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1)) (Var 1))) = Valid :=
+  eq_refl.
+Example tauto_mp2 :
+  tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1))
+                         (Imp (Imp (Var 1) (Var 2)) (Var 1)))) = Valid :=
+  eq_refl.
+Example tauto_mp3 :
+  tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1))
+                         (Imp (Imp (Var 1) (Var 2)) (Var 2)))) = Valid :=
+  eq_refl.
 
 Lemma pick_hyp_def {A} (f:A) rh h :
   In (f,rh) (pick_hyp h) <-> exists rh1 rh2, rh=rh1++rh2 /\ h = rh1++f::rh2.
